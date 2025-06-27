@@ -2,7 +2,7 @@ import './style.css';
 
 
 const CELL_COUNT = 13;
-const CELL_SIZE = 30;
+const CELL_SIZE = 80;
 
 const GRID_SIZE = CELL_COUNT * CELL_SIZE;
 
@@ -41,8 +41,8 @@ const animate = (timestamp: number): void => {
   // tank1!.style.transform = `translateX(${tank1X}px)`;
   // tank1!.style.transform = `translateY(${tank1Y}px)`;
   tank1!.style.transform = `translate(${tank1X}px, ${tank1Y}px)`;
-  vectorMove[0] = 0;
-  vectorMove[1] = 0;
+  // vectorMove[0] = 0;
+  // vectorMove[1] = 0;
   requestAnimationFrame(animate);
 }
 
@@ -50,23 +50,29 @@ window.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'ArrowRight':
       vectorMove[0] = 1;
+      vectorMove[1] = 0;
       break;
     case 'ArrowLeft':
       vectorMove[0] = -1;
+      vectorMove[1] = 0;
       break;
 
 
     case 'ArrowUp':
       vectorMove[1] = -1;
+      vectorMove[0] = 0;
       break;
     case 'ArrowDown':
       vectorMove[1] = 1;
+      vectorMove[0] = 0;
       break;
   
     default:
       break;
   }
 })
+
+window.addEventListener('keyup', (e) => { vectorMove[0] = 0; vectorMove[1] = 0;})
 
 // requestAnimationFrame(animate);
 // animate(performance.now())

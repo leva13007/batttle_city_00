@@ -11,5 +11,8 @@
   "devDependencies": {
     "typescript": "~5.8.3",
     "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "gamekit-utils": "^0.1.0"
   }
 }
