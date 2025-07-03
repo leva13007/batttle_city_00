@@ -6,8 +6,8 @@ type Direction = [MoveVector, MoveVector];
 
 const config = {
   CELL_COUNT: 13,
-  CELL_SIZE: 30,
-  SPRITE_TANK_SIZE: 16,
+  CELL_SIZE: 60,
+  SPRITE_FRAME_SIZE: 16,
   get GRID_SIZE() {
     return this.CELL_COUNT * this.CELL_SIZE
   }
@@ -25,6 +25,75 @@ const directionMap: Record<string, Direction> = {
   ArrowDown: tankDirections.DOWN,
   ArrowLeft: tankDirections.LEFT,
   ArrowRight: tankDirections.RIGHT,
+}
+
+const tileTypes = {
+  EMPTY: 0,
+  BRICK: 1,
+  STONE: 2,
+  WATER: 3,
+  BUSH: 4,
+  ICE: 5,
+} as const;
+
+const tileSpritePosition = {
+  0: [0,0],
+  1: [16,0],
+  2: [16,1],
+  3: [16,2],
+  4: [17,2],
+  5: [18,2],
+} as const;
+
+type TileType = typeof tileTypes[keyof typeof tileTypes]
+
+const map_01: TileType[][] = [
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,1,1,1,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,2,2,2,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,3,3,3,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,4,4,4,0,0,0,0,0,0,],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
+  [0,0,0,0,5,5,5,0,0,0,0,0,0,],
+];
+
+class Map {
+  private map: TileType[][];
+
+  constructor(map: TileType[][]) {
+    this.map = map;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    for(let r=0; r<this.map.length;r++){
+      for(let c=0; c<this.map[r].length;c++){
+        const tile = this.map[r][c];
+        if(tile !== tileTypes.EMPTY){
+          const gridX = c * config.CELL_SIZE;
+          const gridY = r * config.CELL_SIZE;
+          const [spriteX, spriteY] = tileSpritePosition[tile]
+          ctx!.drawImage(
+            img,
+            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
+            gridX, gridY, config.CELL_SIZE, config.CELL_SIZE
+          );
+        }
+      }
+    }
+  }
+
+  isWalkable(x: number, y: number): boolean {
+    const c = Math.floor(x / config.CELL_SIZE);
+    const r = Math.floor(y / config.CELL_SIZE);
+    const tile = this.map[r][c];
+    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile) 
+  }
 }
 
 class Tank {
@@ -46,21 +115,26 @@ class Tank {
     const x = this.getSpriteOffetX();
     ctx!.drawImage(
       img,
-      x, 0, config.SPRITE_TANK_SIZE, config.SPRITE_TANK_SIZE, // add tank level 2sd * level
+      x, 0, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
       this.x, this.y, config.CELL_SIZE, config.CELL_SIZE
     );
   }
 
   getSpriteOffetX() {
-    return config.SPRITE_TANK_SIZE * this.tank1DirrectionMap[`${this.vectorMove[0]},${this.vectorMove[1]}`];
+    return config.SPRITE_FRAME_SIZE * this.tank1DirrectionMap[`${this.vectorMove[0]},${this.vectorMove[1]}`];
   }
 
-  move(deltaTime: number) {
+  move(deltaTime: number, map: Map) {
     if (!this.isMovingTank) return;
     const distance = this.tankVelosity * deltaTime;
 
-    this.x += distance * this.vectorMove[0];
-    this.y += distance * this.vectorMove[1];
+    const newX = this.x + distance * this.vectorMove[0];
+    const newY = this.y + distance * this.vectorMove[1];
+
+    if(map.isWalkable(newX, newY)) {
+      this.x = newX;
+      this.y = newY;
+    }
 
     this.x = clamp(this.x, 0, config.GRID_SIZE - config.CELL_SIZE);
     this.y = clamp(this.y, 0, config.GRID_SIZE - config.CELL_SIZE);
@@ -159,7 +233,8 @@ class Game {
   private inputManager: InputManager;
   private lastTimeStamp = 0;
   private player1: Tank;
-  public spriteImg: HTMLImageElement;
+  private spriteImg: HTMLImageElement;
+  private map: Map;
 
   constructor() {
     this.spriteImg = new Image();
@@ -167,6 +242,7 @@ class Game {
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
+    this.map = new Map(map_01);
   }
 
   setInputCbs(){
@@ -187,7 +263,7 @@ class Game {
     const deltaTime = timestamp - this.lastTimeStamp;
     this.lastTimeStamp = timestamp;
 
-    this.player1.move(deltaTime)
+    this.player1.move(deltaTime, this.map)
     this.render()
 
     requestAnimationFrame(this.animate.bind(this));
@@ -195,6 +271,7 @@ class Game {
 
   render() {
     this.renderer.clear();
+    this.map.draw(this.renderer.getContext(), this.spriteImg);
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
   }
 }
