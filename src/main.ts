@@ -13,6 +13,20 @@ const config = {
   }
 }
 
+const tankDirections: Record<string, Direction> = {
+    UP: [0, -1],
+    DOWN: [0, 1],
+    LEFT: [-1, 0],
+    RIGHT: [1, 0],
+  }
+
+const directionMap: Record<string, Direction> = {
+  ArrowUp: tankDirections.UP,
+  ArrowDown: tankDirections.DOWN,
+  ArrowLeft: tankDirections.LEFT,
+  ArrowRight: tankDirections.RIGHT,
+}
+
 class Tank {
   private isMovingTank = false;
   private tankVelosity = .12; //px per Msecond
@@ -61,46 +75,112 @@ class Tank {
   }
 }
 
-class Game {
+class AssetLoader {
+  static async loadSprite(src: string): Promise<HTMLImageElement> {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => res(img);
+      img.onerror = () => rej(new Error('Failed to load image'));
+    });
+  }
+}
 
-  private lastTimeStamp = 0;
+class Renderer {
   private ctx!: CanvasRenderingContext2D;
-  private player1: Tank;
-  public spriteImg: HTMLImageElement;
 
   constructor() {
-    this.spriteImg = new Image();
-    this.loadAssets();
-    this.player1 = new Tank();
-    this.canvasSetup();
-    this.setupEventListeners();
+    this.setup();
   }
 
-  loadAssets() {
-    this.spriteImg.src = "image.png";
-    this.spriteImg.onload = () => {
-      this.animate(performance.now());
-    };
-    this.spriteImg.onerror = () => {
-      console.error('Failed to load image');
-    };
-  }
-
-  canvasGridSize() {
+  gridSize() {
     return config.CELL_COUNT * config.CELL_SIZE;
   }
 
-  canvasSetup() {
+  setup() {
     document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <canvas id="canvas" ></canvas>
     `;
 
     const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-    canvas.width = this.canvasGridSize();
-    canvas.height = this.canvasGridSize();
+    canvas.width = this.gridSize();
+    canvas.height = this.gridSize();
 
     this.ctx = canvas!.getContext("2d") as CanvasRenderingContext2D; // TODO fix it
+  }
+
+  clear() {
+    this.ctx!.clearRect(0, 0, config.GRID_SIZE, config.GRID_SIZE);
+  }
+
+  getContext() {
+    return this.ctx;
+  }
+}
+
+class InputManager {
+  private changeDirection?: (direction: Direction) => void;
+  private toggleMovment?: (movement: boolean) => void;
+
+  constructor(){
+    this.setupEventListeners();
+  }
+
+  setChangeDirectionCb(cb: (direction: Direction) => void) {
+    this.changeDirection = cb;
+  }
+
+  setToggleMovmentCb(cb: (movement: boolean) => void) {
+    this.toggleMovment = cb;
+  }
+
+  private setupEventListeners() {
+    window.addEventListener('keydown', this.handleKeyDown.bind(this));
+    window.addEventListener('keyup', this.handleKeyUp.bind(this));
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {    
+    const direction = directionMap[e.key];
+
+    if(direction) {
+      this.changeDirection?.(direction);
+      this.toggleMovment?.(true);
+    }
+  }
+  private handleKeyUp() {
+    this.toggleMovment?.(false);
+  }
+}
+
+class Game {
+
+  private renderer: Renderer;
+  private inputManager: InputManager;
+  private lastTimeStamp = 0;
+  private player1: Tank;
+  public spriteImg: HTMLImageElement;
+
+  constructor() {
+    this.spriteImg = new Image();
+    this.player1 = new Tank();
+    this.renderer = new Renderer();
+    this.inputManager = new InputManager();
+    this.setInputCbs();
+  }
+
+  setInputCbs(){
+    this.inputManager.setChangeDirectionCb((dir) => this.player1.setDirection(dir));
+    this.inputManager.setToggleMovmentCb(moving => this.player1.setMoving(moving));
+  }
+
+  async start() {
+    try{
+      this.spriteImg = await AssetLoader.loadSprite("image.png");
+      this.animate(performance.now());
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   private animate(timestamp: number): void {
@@ -114,41 +194,11 @@ class Game {
   }
 
   render() {
-    this.ctx!.clearRect(0, 0, config.GRID_SIZE, config.GRID_SIZE);
-    this.player1.draw(this.ctx, this.spriteImg);
-  }
-
-  private setupEventListeners() {
-    window.addEventListener('keydown', this.handleKeyDown.bind(this));
-    window.addEventListener('keyup', this.handleKeyUp.bind(this));
-  }
-
-  private tankDirections: Record<string, Direction> = {
-    UP: [0, -1],
-    DOWN: [0, 1],
-    LEFT: [-1, 0],
-    RIGHT: [1, 0],
-  }
-
-  private directionMap: Record<string, Direction> = {
-    ArrowUp: this.tankDirections.UP,
-    ArrowDown: this.tankDirections.DOWN,
-    ArrowLeft: this.tankDirections.LEFT,
-    ArrowRight: this.tankDirections.RIGHT,
-  }
-
-  private handleKeyDown(e: KeyboardEvent) {    
-    const direction = this.directionMap[e.key];
-
-    if(direction) {
-      this.player1.setDirection(direction);
-      this.player1.setMoving(true);
-    }
-  }
-  private handleKeyUp() {
-    this.player1.setMoving(false);
+    this.renderer.clear();
+    this.player1.draw(this.renderer.getContext(), this.spriteImg);
   }
 }
 
 
-new Game();
+const game = new Game();
+game.start();
