@@ -2,6 +2,7 @@ import './style.css';
 import { clamp } from "gamekit-utils";
 
 type MoveVector = -1 | 0 | 1;
+type Direction = [MoveVector, MoveVector];
 
 const config = {
   CELL_COUNT: 13,
@@ -17,7 +18,7 @@ class Tank {
   private tankVelosity = .12; //px per Msecond
   private x = 0;
   private y = 0;
-  private vectorMove: [MoveVector, MoveVector] = [0, 1]; // [dX, dY]
+  private vectorMove: Direction = [0, 1]; // [dX, dY]
   private tank1DirrectionMap: Record<string, number> = {
     "0,-1": 0, // up
     "-1,0": 2, // left
@@ -122,22 +123,27 @@ class Game {
     window.addEventListener('keyup', this.handleKeyUp.bind(this));
   }
 
-  private handleKeyDown(e: KeyboardEvent) {
-    switch (e.key) {
-      case 'ArrowRight':
-        this.player1.setDirection([1, 0]);
-        break;
-      case 'ArrowLeft':
-        this.player1.setDirection([-1, 0]);
-        break;
-      case 'ArrowUp':
-        this.player1.setDirection([0, -1]);
-        break;
-      case 'ArrowDown':
-        this.player1.setDirection([0, 1]);
-        break;
+  private tankDirections: Record<string, Direction> = {
+    UP: [0, -1],
+    DOWN: [0, 1],
+    LEFT: [-1, 0],
+    RIGHT: [1, 0],
+  }
+
+  private directionMap: Record<string, Direction> = {
+    ArrowUp: this.tankDirections.UP,
+    ArrowDown: this.tankDirections.DOWN,
+    ArrowLeft: this.tankDirections.LEFT,
+    ArrowRight: this.tankDirections.RIGHT,
+  }
+
+  private handleKeyDown(e: KeyboardEvent) {    
+    const direction = this.directionMap[e.key];
+
+    if(direction) {
+      this.player1.setDirection(direction);
+      this.player1.setMoving(true);
     }
-    this.player1.setMoving(true);
   }
   private handleKeyUp() {
     this.player1.setMoving(false);
