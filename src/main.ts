@@ -7,9 +7,10 @@ type SpriteAnimationFrameIdex = 0 | 1;
 type TankLevel = 0 | 1 | 2 | 3;
 
 const config = {
-  CELL_COUNT: 13,
-  CELL_SIZE: 60,
+  CELL_COUNT: 13 * 2,
+  CELL_SIZE: 30,
   SPRITE_FRAME_SIZE: 16,
+  SPRITE_FRAME_SIZE_HALF: 8,
   get GRID_SIZE() {
     return this.CELL_COUNT * this.CELL_SIZE
   },
@@ -17,6 +18,7 @@ const config = {
     return this.CELL_SIZE / 2
   },
   SPRITE_MOVING_ANIMATION_INTERVAL: 80,
+  debug: true,
 }
 
 const tankDirections: Record<string, Direction> = {
@@ -44,29 +46,42 @@ const tileTypes = {
 
 const tileSpritePosition = {
   0: [0, 0],
-  1: [16, 0],
-  2: [16, 1],
-  3: [16, 2],
-  4: [17, 2],
-  5: [18, 2],
+  1: [16, 4],
+  2: [16, 4.5],
+  3: [16, 5],
+  4: [16.5, 4.5],
+  5: [17, 4.5],
 } as const;
 
 type TileType = typeof tileTypes[keyof typeof tileTypes]
 
 const map_01: TileType[][] = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 5, 5, 5, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 3, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 4, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
 ];
 
 class Map {
@@ -86,7 +101,7 @@ class Map {
           const [spriteX, spriteY] = tileSpritePosition[tile]
           ctx!.drawImage(
             img,
-            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
+            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE_HALF, config.SPRITE_FRAME_SIZE_HALF, // add tank level 2sd * level
             gridX, gridY, config.CELL_SIZE, config.CELL_SIZE
           );
         }
@@ -108,7 +123,7 @@ class Tank {
   private multiplyTankVelosity = 2.2;
   private x = 0;
   private y = 0;
-  private size = config.CELL_SIZE;
+  private size = config.CELL_SIZE * 2;
   private vectorMove: Direction = [0, 1]; // [dX, dY]
   private tank1DirrectionMap: Record<string, number> = {
     "0,-1": 0, // up
@@ -130,8 +145,12 @@ class Tank {
       img,
       x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), (config.SPRITE_FRAME_SIZE * this.level),
       config.SPRITE_FRAME_SIZE - 1, config.SPRITE_FRAME_SIZE - 1, // add tank level 2sd * level
-      this.x, this.y, config.CELL_SIZE, config.CELL_SIZE
+      this.x, this.y, this.size, this.size
     );
+    if (config.debug){
+      ctx.strokeStyle = "green";
+      ctx.strokeRect(this.x, this.y, this.size, this.size);
+    }
   }
 
   getSpriteOffetX() {
@@ -154,8 +173,8 @@ class Tank {
 
     const distance = this.getTankSpeed() * deltaTime;
 
-    const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - config.CELL_SIZE);
-    const newY = clamp(this.y + distance * this.vectorMove[1], 0, config.GRID_SIZE - config.CELL_SIZE);
+    const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - this.size);
+    const newY = clamp(this.y + distance * this.vectorMove[1], 0, config.GRID_SIZE - this.size);
 
     if (this.canMove(newX, newY, map)) {
       this.x = newX;
@@ -186,8 +205,8 @@ class Tank {
   }
 
   snapToGrid() {
-    this.x = Math.round(this.x / config.CELL_HALF_SIZE) * config.CELL_HALF_SIZE;
-    this.y = Math.round(this.y / config.CELL_HALF_SIZE) * config.CELL_HALF_SIZE;
+    this.x = Math.round(this.x / config.CELL_SIZE) * config.CELL_SIZE;
+    this.y = Math.round(this.y / config.CELL_SIZE) * config.CELL_SIZE;
   }
 
   setMoving(moving: boolean) {
