@@ -132,16 +132,13 @@ class Tank {
     if (!this.isMovingTank) return;
     const distance = this.tankVelosity * deltaTime;
 
-    const newX = this.x + distance * this.vectorMove[0];
-    const newY = this.y + distance * this.vectorMove[1];
+    const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - config.CELL_SIZE);
+    const newY = clamp(this.y + distance * this.vectorMove[1], 0, config.GRID_SIZE - config.CELL_SIZE);
 
     if (this.canMove(newX, newY, map)) {
       this.x = newX;
       this.y = newY;
     }
-
-    this.x = clamp(this.x, 0, config.GRID_SIZE - config.CELL_SIZE);
-    this.y = clamp(this.y, 0, config.GRID_SIZE - config.CELL_SIZE);
   }
 
   canMove(newX: number, newY: number, map: Map) {
@@ -153,7 +150,6 @@ class Tank {
     ];
 
     for(const [x,y] of corners) {
-      
       if(!map.isWalkable(x,y)) return false;
     }
 
