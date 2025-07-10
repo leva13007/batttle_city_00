@@ -140,6 +140,7 @@ class Tank {
   }
 
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    ctx.imageSmoothingEnabled = false;
     const x = this.getSpriteOffetX();
     ctx!.drawImage(
       img,
