@@ -4,6 +4,7 @@ import { clamp } from "gamekit-utils";
 type MoveVector = -1 | 0 | 1;
 type Direction = [MoveVector, MoveVector];
 type SpriteAnimationFrameIdex = 0 | 1;
+type TankLevel = 0 | 1 | 2 | 3;
 
 const config = {
   CELL_COUNT: 13,
@@ -103,7 +104,8 @@ class Map {
 
 class Tank {
   private isMovingTank = false;
-  private tankVelosity = .12; //px per Msecond
+  private tankVelosity = .1; //px per Msecond
+  private multiplyTankVelosity = 2.2;
   private x = 0;
   private y = 0;
   private size = config.CELL_SIZE;
@@ -116,20 +118,29 @@ class Tank {
   }
   private spriteAnimationTimer: number = 0;
   private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
+  private level: TankLevel;
 
-  constructor() { }
+  constructor(level: TankLevel = 0) {
+    this.level = level;
+  }
 
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     const x = this.getSpriteOffetX();
     ctx!.drawImage(
       img,
-      x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), 0, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
+      x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), (config.SPRITE_FRAME_SIZE * this.level),
+      config.SPRITE_FRAME_SIZE - 1, config.SPRITE_FRAME_SIZE - 1, // add tank level 2sd * level
       this.x, this.y, config.CELL_SIZE, config.CELL_SIZE
     );
   }
 
   getSpriteOffetX() {
     return config.SPRITE_FRAME_SIZE * this.tank1DirrectionMap[`${this.vectorMove[0]},${this.vectorMove[1]}`];
+  }
+
+  getTankSpeed() {
+    if (this.level === 1) return this.tankVelosity * this.multiplyTankVelosity;
+    return this.tankVelosity;
   }
 
   move(deltaTime: number, map: Map) {
@@ -141,7 +152,7 @@ class Tank {
       this.spriteAnimationTimer = 0;
     }
 
-    const distance = this.tankVelosity * deltaTime;
+    const distance = this.getTankSpeed() * deltaTime;
 
     const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - config.CELL_SIZE);
     const newY = clamp(this.y + distance * this.vectorMove[1], 0, config.GRID_SIZE - config.CELL_SIZE);
