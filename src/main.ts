@@ -14,11 +14,11 @@ const config = {
 }
 
 const tankDirections: Record<string, Direction> = {
-    UP: [0, -1],
-    DOWN: [0, 1],
-    LEFT: [-1, 0],
-    RIGHT: [1, 0],
-  }
+  UP: [0, -1],
+  DOWN: [0, 1],
+  LEFT: [-1, 0],
+  RIGHT: [1, 0],
+}
 
 const directionMap: Record<string, Direction> = {
   ArrowUp: tankDirections.UP,
@@ -37,30 +37,30 @@ const tileTypes = {
 } as const;
 
 const tileSpritePosition = {
-  0: [0,0],
-  1: [16,0],
-  2: [16,1],
-  3: [16,2],
-  4: [17,2],
-  5: [18,2],
+  0: [0, 0],
+  1: [16, 0],
+  2: [16, 1],
+  3: [16, 2],
+  4: [17, 2],
+  5: [18, 2],
 } as const;
 
 type TileType = typeof tileTypes[keyof typeof tileTypes]
 
 const map_01: TileType[][] = [
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,1,1,1,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,2,2,2,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,3,3,3,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,4,4,4,0,0,0,0,0,0,],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,],
-  [0,0,0,0,5,5,5,0,0,0,0,0,0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 5, 5, 5, 0, 0, 0, 0, 0, 0,],
 ];
 
 class Map {
@@ -71,10 +71,10 @@ class Map {
   }
 
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    for(let r=0; r<this.map.length;r++){
-      for(let c=0; c<this.map[r].length;c++){
+    for (let r = 0; r < this.map.length; r++) {
+      for (let c = 0; c < this.map[r].length; c++) {
         const tile = this.map[r][c];
-        if(tile !== tileTypes.EMPTY){
+        if (tile !== tileTypes.EMPTY) {
           const gridX = c * config.CELL_SIZE;
           const gridY = r * config.CELL_SIZE;
           const [spriteX, spriteY] = tileSpritePosition[tile]
@@ -92,7 +92,7 @@ class Map {
     const c = Math.floor(x / config.CELL_SIZE);
     const r = Math.floor(y / config.CELL_SIZE);
     const tile = this.map[r][c];
-    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile) 
+    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile)
   }
 }
 
@@ -131,7 +131,7 @@ class Tank {
     const newX = this.x + distance * this.vectorMove[0];
     const newY = this.y + distance * this.vectorMove[1];
 
-    if(map.isWalkable(newX, newY)) {
+    if (map.isWalkable(newX, newY)) {
       this.x = newX;
       this.y = newY;
     }
@@ -140,7 +140,7 @@ class Tank {
     this.y = clamp(this.y, 0, config.GRID_SIZE - config.CELL_SIZE);
   }
 
-  setDirection(vector: [MoveVector, MoveVector]){
+  setDirection(vector: [MoveVector, MoveVector]) {
     this.vectorMove = vector;
   }
 
@@ -197,7 +197,7 @@ class InputManager {
   private changeDirection?: (direction: Direction) => void;
   private toggleMovment?: (movement: boolean) => void;
 
-  constructor(){
+  constructor() {
     this.setupEventListeners();
   }
 
@@ -214,10 +214,10 @@ class InputManager {
     window.addEventListener('keyup', this.handleKeyUp.bind(this));
   }
 
-  private handleKeyDown(e: KeyboardEvent) {    
+  private handleKeyDown(e: KeyboardEvent) {
     const direction = directionMap[e.key];
 
-    if(direction) {
+    if (direction) {
       this.changeDirection?.(direction);
       this.toggleMovment?.(true);
     }
@@ -245,13 +245,13 @@ class Game {
     this.map = new Map(map_01);
   }
 
-  setInputCbs(){
+  setInputCbs() {
     this.inputManager.setChangeDirectionCb((dir) => this.player1.setDirection(dir));
     this.inputManager.setToggleMovmentCb(moving => this.player1.setMoving(moving));
   }
 
   async start() {
-    try{
+    try {
       this.spriteImg = await AssetLoader.loadSprite("image.png");
       this.animate(performance.now());
     } catch (e) {
