@@ -3,6 +3,7 @@ import { clamp } from "gamekit-utils";
 
 type MoveVector = -1 | 0 | 1;
 type Direction = [MoveVector, MoveVector];
+type SpriteAnimationFrameIdex = 0 | 1;
 
 const config = {
   CELL_COUNT: 13,
@@ -13,7 +14,8 @@ const config = {
   },
   get CELL_HALF_SIZE() {
     return this.CELL_SIZE / 2
-  }
+  },
+  SPRITE_MOVING_ANIMATION_INTERVAL: 80,
 }
 
 const tankDirections: Record<string, Direction> = {
@@ -112,6 +114,8 @@ class Tank {
     "0,1": 4, // down
     "1,0": 6, // right
   }
+  private spriteAnimationTimer: number = 0;
+  private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
 
   constructor() { }
 
@@ -119,7 +123,7 @@ class Tank {
     const x = this.getSpriteOffetX();
     ctx!.drawImage(
       img,
-      x, 0, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
+      x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), 0, config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // add tank level 2sd * level
       this.x, this.y, config.CELL_SIZE, config.CELL_SIZE
     );
   }
@@ -130,6 +134,13 @@ class Tank {
 
   move(deltaTime: number, map: Map) {
     if (!this.isMovingTank) return;
+
+    this.spriteAnimationTimer += deltaTime;
+    if (this.spriteAnimationTimer >= config.SPRITE_MOVING_ANIMATION_INTERVAL){
+      this.spriteAnimationFrameId = Number(!this.spriteAnimationFrameId) as SpriteAnimationFrameIdex
+      this.spriteAnimationTimer = 0;
+    }
+
     const distance = this.tankVelosity * deltaTime;
 
     const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - config.CELL_SIZE);
