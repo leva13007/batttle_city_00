@@ -10,6 +10,9 @@ const config = {
   SPRITE_FRAME_SIZE: 16,
   get GRID_SIZE() {
     return this.CELL_COUNT * this.CELL_SIZE
+  },
+  get CELL_HALF_SIZE() {
+    return this.CELL_SIZE / 2
   }
 }
 
@@ -140,8 +143,16 @@ class Tank {
     this.y = clamp(this.y, 0, config.GRID_SIZE - config.CELL_SIZE);
   }
 
-  setDirection(vector: [MoveVector, MoveVector]) {
+  setDirection(vector: [MoveVector, MoveVector]) {    
+    if (Math.abs(this.vectorMove[0]) !== Math.abs(vector[0]) &&  Math.abs(this.vectorMove[1]) !== Math.abs(vector[1])){
+      this.snapToGrid()
+    }
     this.vectorMove = vector;
+  }
+
+  snapToGrid() {
+    this.x = Math.round(this.x / config.CELL_HALF_SIZE) * config.CELL_HALF_SIZE;
+    this.y = Math.round(this.y / config.CELL_HALF_SIZE) * config.CELL_HALF_SIZE;
   }
 
   setMoving(moving: boolean) {
