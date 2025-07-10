@@ -55,7 +55,7 @@ const map_01: TileType[][] = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
@@ -104,6 +104,7 @@ class Tank {
   private tankVelosity = .12; //px per Msecond
   private x = 0;
   private y = 0;
+  private size = config.CELL_SIZE;
   private vectorMove: Direction = [0, 1]; // [dX, dY]
   private tank1DirrectionMap: Record<string, number> = {
     "0,-1": 0, // up
@@ -134,13 +135,29 @@ class Tank {
     const newX = this.x + distance * this.vectorMove[0];
     const newY = this.y + distance * this.vectorMove[1];
 
-    if (map.isWalkable(newX, newY)) {
+    if (this.canMove(newX, newY, map)) {
       this.x = newX;
       this.y = newY;
     }
 
     this.x = clamp(this.x, 0, config.GRID_SIZE - config.CELL_SIZE);
     this.y = clamp(this.y, 0, config.GRID_SIZE - config.CELL_SIZE);
+  }
+
+  canMove(newX: number, newY: number, map: Map) {
+    const corners = [
+      [newX, newY],
+      [newX + this.size - 1, newY],
+      [newX, newY + this.size  - 1],
+      [newX + this.size  - 1, newY + this.size  - 1],
+    ];
+
+    for(const [x,y] of corners) {
+      
+      if(!map.isWalkable(x,y)) return false;
+    }
+
+    return true;
   }
 
   setDirection(vector: [MoveVector, MoveVector]) {    
