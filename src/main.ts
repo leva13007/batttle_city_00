@@ -130,8 +130,8 @@ type BelongsTo = HostDefender | HostEnemy;
 const bulletWithDirection = {
   0: [0,0,13,0], // UP
   1: [0,8,13,0], // DOWN
-  2: [8,8,4,17], // LEFT
-  3: [8,0,10,2], // RIGHT
+  2: [8,8,0,17], // LEFT
+  3: [8,0,0,17], // RIGHT
 }
 
 const tileBulletPossition = {
@@ -161,6 +161,15 @@ class Bullet {
     this.belongTo = belongTo;
   }
 
+  getHitbox() {
+    if ([2,3].includes(this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] )) {
+      return [this.size / 2,this.size];
+    } else if ([0,1].includes(this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] )) {
+      return [this.size,this.size / 2];
+    }
+    return [this.size,this.size]; // [width, height]
+  }
+
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     const indOfDir = this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] as keyof typeof bulletWithDirection;
     const aa = bulletWithDirection[indOfDir];
@@ -171,6 +180,22 @@ class Bullet {
       this.x + aa[2], this.y + aa[3], 
       this.size / 2, this.size / 2 // CONST
     );
+
+    if (config.debug){
+      const hitBox = this.getHitbox()
+      ctx.strokeStyle = "green";
+      ctx.strokeRect(this.x, this.y, hitBox[0], hitBox[1]);
+    }
+  }
+
+  move(deltaTime: number, map: Map) {
+    const distance = this.bulletVelosity * deltaTime;
+
+    const newX = clamp(this.x + distance * this.direction[0], 0, config.GRID_SIZE - this.size / 2);
+    const newY = clamp(this.y + distance * this.direction[1], 0, config.GRID_SIZE - this.size / 2);
+
+    this.x = newX;
+    this.y = newY;
   }
 }
 
@@ -241,6 +266,7 @@ class Tank {
   }
 
   canMove(newX: number, newY: number, map: Map) {
+    // change to the Hit Box getter
     const corners = [
       [newX, newY],
       [newX + this.size - 1, newY],
@@ -285,7 +311,7 @@ class Tank {
         break;
       case "1,0": // RIGHT
         x = this.x + config.CELL_HALF_SIZE;
-        y = this.y + config.CELL_HALF_SIZE;
+        y = this.y;
         break;
       case "0,-1": // UP
         x = this.x
@@ -437,7 +463,9 @@ class Game {
 
     this.player1.move(deltaTime, this.map);
     // loop through all bullets to move it
-    this.bullets.forEach(() => {})
+    this.bullets.forEach((bullet) => {
+      bullet.move(deltaTime, this.map);
+    })
     this.render();
 
     requestAnimationFrame(this.animate.bind(this));
