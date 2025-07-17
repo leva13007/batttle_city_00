@@ -35,6 +35,10 @@ const directionMap: Record<string, Direction> = {
   ArrowRight: tankDirections.RIGHT,
 }
 
+const keyMap: Record<string, any> = {
+  Space: "makeFire",
+}
+
 const tileTypes = {
   EMPTY: 0,
   BRICK: 1,
@@ -114,6 +118,59 @@ class Map {
     const r = Math.floor(y / config.CELL_SIZE);
     const tile = this.map[r][c];
     return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile)
+  }
+}
+
+type HostEnemy = 1;
+type HostDefender = 0;
+
+type BelongsTo = HostDefender | HostEnemy;
+
+// [sx_on_Sprite,sy_on_Sprite, x_display_correction, y_display_correction]
+const bulletWithDirection = {
+  0: [0,0,13,0], // UP
+  1: [0,8,13,0], // DOWN
+  2: [8,8,4,17], // LEFT
+  3: [8,0,10,2], // RIGHT
+}
+
+const tileBulletPossition = {
+  0: [22,0], // Standart bullet
+}
+
+class Bullet {
+  private bulletVelosity = .2; //px per Msecond
+  private x = 0;
+  private y = 0;
+  private direction: Direction; // [dX, dY]
+  private belongTo: BelongsTo;
+  private bulletType = 0;
+
+  private size = config.CELL_SIZE * 2;
+  private bulletDirrectionMap: Record<string, number> = {
+    "0,-1": 0, // up
+    "-1,0": 2, // left
+    "0,1": 1, // down
+    "1,0": 3, // right
+  }
+
+  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo) {
+    this.x = x;
+    this.y = y;
+    this.direction = direction;
+    this.belongTo = belongTo;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    const indOfDir = this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] as keyof typeof bulletWithDirection;
+    const aa = bulletWithDirection[indOfDir];
+    ctx!.drawImage(
+      img,
+      tileBulletPossition[0][0] * config.SPRITE_FRAME_SIZE + aa[0], tileBulletPossition[0][1] * config.SPRITE_FRAME_SIZE + aa[1],
+      config.SPRITE_FRAME_SIZE / 2, config.SPRITE_FRAME_SIZE / 2, // CONST
+      this.x + aa[2], this.y + aa[3], 
+      this.size / 2, this.size / 2 // CONST
+    );
   }
 }
 
@@ -213,6 +270,39 @@ class Tank {
   setMoving(moving: boolean) {
     this.isMovingTank = moving;
   }
+
+  fire(bullets: Bullet[]) {
+    console.log("-".repeat(20))
+    console.log(this.x, this.y, this.vectorMove)
+
+    let x = this.x;
+    let y = this.y;
+
+    switch (`${this.vectorMove[0]},${this.vectorMove[1]}`) {
+      case "-1,0": // LEFT
+        x = this.x;
+        y = this.y;
+        break;
+      case "1,0": // RIGHT
+        x = this.x + config.CELL_HALF_SIZE;
+        y = this.y + config.CELL_HALF_SIZE;
+        break;
+      case "0,-1": // UP
+        x = this.x
+        y = this.y;
+        break;
+      case "0,1": // DOWN
+        x = this.x
+        y = this.y + config.CELL_HALF_SIZE * 2;
+        break;
+    
+      default:
+        break;
+    }
+
+    const newBullet = new Bullet(x, y, this.vectorMove, 0);
+    bullets.push(newBullet);
+  }
 }
 
 class AssetLoader {
@@ -262,6 +352,7 @@ class Renderer {
 class InputManager {
   private changeDirection?: (direction: Direction) => void;
   private toggleMovment?: (movement: boolean) => void;
+  private makeFire?: () => void;
 
   constructor() {
     this.setupEventListeners();
@@ -275,6 +366,10 @@ class InputManager {
     this.toggleMovment = cb;
   }
 
+  setMakeFire(cb: () => void) {
+    this.makeFire = cb;
+  }
+
   private setupEventListeners() {
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
     window.addEventListener('keyup', this.handleKeyUp.bind(this));
@@ -283,9 +378,18 @@ class InputManager {
   private handleKeyDown(e: KeyboardEvent) {
     const direction = directionMap[e.key];
 
+    // if player press movement button
     if (direction) {
       this.changeDirection?.(direction);
       this.toggleMovment?.(true);
+    }
+
+    const keyEvent = keyMap[e.code];
+
+    if(keyEvent) {
+      if(keyEvent === "makeFire") {
+        this.makeFire?.()
+      }
     }
   }
   private handleKeyUp() {
@@ -301,6 +405,7 @@ class Game {
   private player1: Tank;
   private spriteImg: HTMLImageElement;
   private map: Map;
+  private bullets: Bullet[] = [];
 
   constructor() {
     this.spriteImg = new Image();
@@ -314,6 +419,7 @@ class Game {
   setInputCbs() {
     this.inputManager.setChangeDirectionCb((dir) => this.player1.setDirection(dir));
     this.inputManager.setToggleMovmentCb(moving => this.player1.setMoving(moving));
+    this.inputManager.setMakeFire(() => this.player1.fire(this.bullets))
   }
 
   async start() {
@@ -329,8 +435,10 @@ class Game {
     const deltaTime = timestamp - this.lastTimeStamp;
     this.lastTimeStamp = timestamp;
 
-    this.player1.move(deltaTime, this.map)
-    this.render()
+    this.player1.move(deltaTime, this.map);
+    // loop through all bullets to move it
+    this.bullets.forEach(() => {})
+    this.render();
 
     requestAnimationFrame(this.animate.bind(this));
   }
@@ -339,6 +447,11 @@ class Game {
     this.renderer.clear();
     this.map.draw(this.renderer.getContext(), this.spriteImg);
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
+
+    // loop through all bullets to render it
+    this.bullets.forEach((bullet) => {
+      bullet.draw(this.renderer.getContext(), this.spriteImg)
+    })
   }
 }
 
