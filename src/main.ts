@@ -116,7 +116,8 @@ class Map {
   isWalkable(x: number, y: number): boolean {
     const c = Math.floor(x / config.CELL_SIZE);
     const r = Math.floor(y / config.CELL_SIZE);
-    const tile = this.map[r][c];
+    const tile = this.map?.[r]?.[c];
+    if (!tile) return true;
     return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile)
   }
 }
@@ -182,20 +183,67 @@ class Bullet {
     );
 
     if (config.debug){
-      const hitBox = this.getHitbox()
+      const hitBox = this.getHitbox();
       ctx.strokeStyle = "green";
       ctx.strokeRect(this.x, this.y, hitBox[0], hitBox[1]);
     }
   }
 
-  move(deltaTime: number, map: Map) {
+  // get the other bullets and all tanks
+  move(deltaTime: number, map: Map): {
+    explode: boolean;
+    point: {x: number; y: number} | null
+  } {
     const distance = this.bulletVelosity * deltaTime;
 
-    const newX = clamp(this.x + distance * this.direction[0], 0, config.GRID_SIZE - this.size / 2);
-    const newY = clamp(this.y + distance * this.direction[1], 0, config.GRID_SIZE - this.size / 2);
+    const newX = this.x + distance * this.direction[0];
+    const newY = this.y + distance * this.direction[1];
+
+    // check collision and if got it - explode & return data
+
+    // check if it outs of the Grid
+    const hitBox = this.getHitbox();
+    if(
+      this.x < 0 ||
+      this.y < 0 ||
+      this.x + hitBox[0] > config.GRID_SIZE ||
+      this.y + hitBox[1] > config.GRID_SIZE
+    ) {
+      return {
+        explode: true,
+        point: {
+          x: this.x,
+          y: this.y
+        },
+      };
+    }
+
+    // check if it got collision with the Map element
+    {
+      const corners = [
+        [newX, newY],                                   // LEFT-TOP
+        [newX + hitBox[0] - 1, newY],                   // RIGHT-TOP
+        [newX, newY + hitBox[1]  - 1],                  // LEFT-BOTTOM
+        [newX + hitBox[0]  - 1, newY + hitBox[1]  - 1], // RIGHT-BOTTOM
+      ];
+
+      for(const [x,y] of corners) {
+        if(!map.isWalkable(x,y)) return {
+          explode: true,
+          point: {
+            x: this.x,
+            y: this.y
+          },
+        };
+      }
+    }
 
     this.x = newX;
     this.y = newY;
+    return {
+      explode: false,
+      point: null,
+    };
   }
 }
 
@@ -463,10 +511,14 @@ class Game {
 
     this.player1.move(deltaTime, this.map);
     // loop through all bullets to move it
-    this.bullets.forEach((bullet) => {
-      bullet.move(deltaTime, this.map);
+    const bulletsStatuses = this.bullets.map((bullet, i) => {
+      return bullet.move(deltaTime, this.map);
     })
     this.render();
+
+    this.bullets = this.bullets.filter((bullet, i) => {
+      return !bulletsStatuses[i].explode;
+    })
 
     requestAnimationFrame(this.animate.bind(this));
   }
