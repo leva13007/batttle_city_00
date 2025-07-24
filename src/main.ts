@@ -17,7 +17,7 @@ const config = {
   get CELL_HALF_SIZE() {
     return this.CELL_SIZE / 2
   },
-  SPRITE_MOVING_ANIMATION_INTERVAL: 80,
+  SPRITE_MOVING_ANIMATION_INTERVAL: 80, // move to the Tank class
   debug: true,
 }
 
@@ -139,6 +139,53 @@ const tileBulletPossition = {
   0: [22,0], // Standart bullet
 }
 
+type ExplosionFrames = 0 | 1 | 2;
+
+class Explosion {
+  private x = 0;
+  private y = 0;
+  private frameCount = 3;
+  private frame: ExplosionFrames = 0;
+  private duration = 300;
+  private frameInterval = this.duration / this.frameCount;
+  private size = config.CELL_SIZE * 2;
+  private isDone = false;
+  private timer = 0;
+  private explosionSpriteX = 21;
+
+  constructor (x: number, y: number){
+    this.x = x;
+    this.y = y;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+
+    ctx!.drawImage(
+      img,
+      this.explosionSpriteX * config.SPRITE_FRAME_SIZE, this.frame * config.SPRITE_FRAME_SIZE,
+      config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
+      this.x, this.y, 
+      this.size, this.size // CONST
+    );
+
+    if (config.debug){}
+  }
+
+  update(deltaTime: number){
+    this.timer += deltaTime;
+
+    if (this.timer > this.duration) {
+      this.isDone = true;
+    } else {
+      this.frame = Math.floor(this.timer / this.frameInterval) as ExplosionFrames
+    }
+  }
+
+  isFinished() {
+    return this.isDone;
+  }
+}
+
 class Bullet {
   private bulletVelosity = .2; //px per Msecond
   private x = 0;
@@ -160,6 +207,10 @@ class Bullet {
     this.y = y;
     this.direction = direction;
     this.belongTo = belongTo;
+  }
+
+  getCoordinates() {
+    return {x: this.x, y: this.y}
   }
 
   getHitbox() {
@@ -480,6 +531,7 @@ class Game {
   private spriteImg: HTMLImageElement;
   private map: Map;
   private bullets: Bullet[] = [];
+  private explosions: Explosion[] = [];
 
   constructor() {
     this.spriteImg = new Image();
@@ -517,8 +569,19 @@ class Game {
     this.render();
 
     this.bullets = this.bullets.filter((bullet, i) => {
+      // if the bullet is exploded then create an Explosion
+      if (bulletsStatuses[i].explode){
+        const {x, y} = bullet.getCoordinates();
+        this.explosions.push(new Explosion(x,y));
+      }
       return !bulletsStatuses[i].explode;
-    })
+    });
+
+    // loop through explosions and check if it still explodes
+    this.explosions = this.explosions.filter((explosion) => {
+      explosion.update(deltaTime);
+      return !explosion.isFinished();
+    });
 
     requestAnimationFrame(this.animate.bind(this));
   }
@@ -532,6 +595,10 @@ class Game {
     this.bullets.forEach((bullet) => {
       bullet.draw(this.renderer.getContext(), this.spriteImg)
     })
+
+    this.explosions.forEach((explosion) => {
+      explosion.draw(this.renderer.getContext(), this.spriteImg)
+    });
   }
 }
 
