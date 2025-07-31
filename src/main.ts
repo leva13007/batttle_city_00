@@ -168,14 +168,44 @@ class Map {
 
   doCollision(bullet: Bullet) {
     const corners = bullet.getFrontCorners(); // 
+    const bulletType = bullet.getBulletType();
 
     if (!corners) return;
-    for(const corner of corners) {
-      const [x,y] = corner;
+    for (const corner of corners) {
+      const [x, y] = corner;
       const c = Math.floor(x / config.CELL_SIZE);
       const r = Math.floor(y / config.CELL_SIZE);
       const tile = this.map?.[r]?.[c];
-      if(tile) this.map[r][c] = 0;
+
+      if (tile) {
+        if (bulletType === 0) {
+          if (([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
+            this.map[r][c] = 0;
+          } else if (tileTypes.BRICK === tile) {
+            const dir = bullet.directonToString();
+
+            switch (dir) {
+              case "0,-1": // up
+                this.map[r][c] = 9; // BRICK_TOP: 9,
+                break;
+              case "-1,0": // left
+                this.map[r][c] = 8; // BRICK_LEFT: 8,
+                break;
+              case "0,1": // down
+                this.map[r][c] = 7; // BRICK_DOWN: 7,
+                break;
+              case "1,0": // right
+                this.map[r][c] = 6; // BRICK_RIGHT: 6,
+                break;
+            }
+          }
+        } else if (bulletType === 1 && ([tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
+          this.map[r][c] = 0;
+        } else if (bulletType === 2) {
+          this.map[r][c] = 0;
+        }
+
+      }
     }
   }
 }
@@ -187,14 +217,14 @@ type BelongsTo = HostDefender | HostEnemy;
 
 // [sx_on_Sprite,sy_on_Sprite, x_display_correction, y_display_correction]
 const bulletWithDirection = {
-  0: [0,0,], // UP
-  1: [0,32,], // DOWN
-  2: [0,48,], // LEFT
-  3: [0,16,], // RIGHT
+  0: [0, 0,], // UP
+  1: [0, 32,], // DOWN
+  2: [0, 48,], // LEFT
+  3: [0, 16,], // RIGHT
 }
 
 const tileBulletPossition = {
-  0: [22,0], // Standart bullet
+  0: [22, 0], // Standart bullet
 }
 
 type ExplosionFrames = 0 | 1 | 2;
@@ -211,7 +241,7 @@ class Explosion {
   private timer = 0;
   private explosionSpriteX = 21;
 
-  constructor (x: number, y: number){
+  constructor(x: number, y: number) {
     this.x = x;
     this.y = y;
   }
@@ -222,14 +252,14 @@ class Explosion {
       img,
       this.explosionSpriteX * config.SPRITE_FRAME_SIZE, this.frame * config.SPRITE_FRAME_SIZE,
       config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
-      this.x, this.y, 
+      this.x, this.y,
       this.size, this.size // CONST
     );
 
-    if (config.debug){}
+    if (config.debug) { }
   }
 
-  update(deltaTime: number){
+  update(deltaTime: number) {
     this.timer += deltaTime;
 
     if (this.timer > this.duration) {
@@ -244,13 +274,15 @@ class Explosion {
   }
 }
 
+type BulletType = 0 | 1 | 2;
+
 class Bullet {
   private bulletVelosity = .2; //px per Msecond
   private x = 0;
   private y = 0;
   private direction: Direction; // [dX, dY]
   private belongTo: BelongsTo;
-  private bulletType = 0;
+  private bulletType: BulletType;
 
   private size = config.CELL_SIZE * 2;
   private bulletDirrectionMap: Record<string, number> = {
@@ -260,19 +292,21 @@ class Bullet {
     "1,0": 3, // right
   }
 
-  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo) {
+  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo, bulletType: BulletType = 0) {
     this.x = x;
     this.y = y;
     this.direction = direction;
     this.belongTo = belongTo;
+    this.bulletType = bulletType;
+    // this.bulletVelosity += bulletType * 0.2
   }
 
   getCoordinates() {
-    return {x: this.x, y: this.y}
+    return { x: this.x, y: this.y }
   }
 
   getHitbox() {
-    return [this.size,this.size]; // [width, height]
+    return [this.size, this.size]; // [width, height]
   }
 
   getStringDirecrtion() {
@@ -290,11 +324,11 @@ class Bullet {
       img,
       tileBulletPossition[0][0] * config.SPRITE_FRAME_SIZE + aa[0], tileBulletPossition[0][1] * config.SPRITE_FRAME_SIZE + aa[1],
       config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
-      this.x, this.y, 
+      this.x, this.y,
       this.size, this.size// CONST
     );
 
-    if (config.debug){
+    if (config.debug) {
       const hitBox = this.getHitbox();
       ctx.strokeStyle = "green";
       ctx.strokeRect(this.x, this.y, hitBox[0], hitBox[1]);
@@ -304,7 +338,7 @@ class Bullet {
   // get the other bullets and all tanks
   move(deltaTime: number, map: Map): {
     explode: boolean;
-    point: {x: number; y: number} | null
+    point: { x: number; y: number } | null
   } {
     const distance = this.bulletVelosity * deltaTime;
 
@@ -318,7 +352,7 @@ class Bullet {
 
     // check if it outs of the Grid
     const hitBox = this.getHitbox();
-    if(
+    if (
       this.x < 0 ||
       this.y < 0 ||
       this.x + hitBox[0] > config.GRID_SIZE ||
@@ -338,12 +372,12 @@ class Bullet {
       const corners = [
         [newX, newY],                                   // LEFT-TOP
         [newX + hitBox[0] / 2, newY],                   // RIGHT-TOP
-        [newX, newY + hitBox[1]  / 2],                  // LEFT-BOTTOM
-        [newX + hitBox[0]  / 2, newY + hitBox[1]  / 2], // RIGHT-BOTTOM
+        [newX, newY + hitBox[1] / 2],                  // LEFT-BOTTOM
+        [newX + hitBox[0] / 2, newY + hitBox[1] / 2], // RIGHT-BOTTOM
       ];
 
-      for(const [x,y] of corners) {
-        if(!map.isFlyable(x,y)) return {
+      for (const [x, y] of corners) {
+        if (!map.isFlyable(x, y)) return {
           explode: true,
           point: {
             x: newX,
@@ -353,7 +387,7 @@ class Bullet {
       }
     }
 
-    
+
     return {
       explode: false,
       point: null,
@@ -363,34 +397,34 @@ class Bullet {
   getHitboxCoordinates() {
     return [
       [this.x, this.y], // left-top
-      [this.x + this.size /2, this.y], // right-top
+      [this.x + this.size / 2, this.y], // right-top
       [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-      [this.x, this.y + this.size /2], // left-bottom
+      [this.x, this.y + this.size / 2], // left-bottom
     ]
   }
 
-  getFrontCorners(){
+  getFrontCorners() {
     const dir = this.directonToString();
 
-    switch(dir){
+    switch (dir) {
       case "0,-1": // up
         return [
           [this.x, this.y], // left-top
-          [this.x + this.size /2, this.y], // right-top
+          [this.x + this.size / 2, this.y], // right-top
         ];
       case "-1,0": // left
         return [
           [this.x, this.y], // left-top
-          [this.x, this.y + this.size /2], // left-bottom
+          [this.x, this.y + this.size / 2], // left-bottom
         ];
       case "0,1": // down
         return [
           [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-      [this.x, this.y + this.size /2], // left-bottom
+          [this.x, this.y + this.size / 2], // left-bottom
         ];
       case "1,0": // right
         return [
-          [this.x + this.size /2, this.y], // right-top
+          [this.x + this.size / 2, this.y], // right-top
           [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
         ];
     }
@@ -398,6 +432,10 @@ class Bullet {
 
   getDirection() {
     return this.direction;
+  }
+
+  getBulletType() {
+    return this.bulletType;
   }
 }
 
@@ -432,7 +470,7 @@ class Tank {
       config.SPRITE_FRAME_SIZE - 1, config.SPRITE_FRAME_SIZE - 1, // add tank level 2sd * level
       this.x, this.y, this.size, this.size
     );
-    if (config.debug){
+    if (config.debug) {
       ctx.strokeStyle = "green";
       ctx.strokeRect(this.x, this.y, this.size, this.size);
     }
@@ -451,7 +489,7 @@ class Tank {
     if (!this.isMovingTank) return;
 
     this.spriteAnimationTimer += deltaTime;
-    if (this.spriteAnimationTimer >= config.SPRITE_MOVING_ANIMATION_INTERVAL){
+    if (this.spriteAnimationTimer >= config.SPRITE_MOVING_ANIMATION_INTERVAL) {
       this.spriteAnimationFrameId = Number(!this.spriteAnimationFrameId) as SpriteAnimationFrameIdex
       this.spriteAnimationTimer = 0;
     }
@@ -472,19 +510,19 @@ class Tank {
     const corners = [
       [newX, newY],
       [newX + this.size - 1, newY],
-      [newX, newY + this.size  - 1],
-      [newX + this.size  - 1, newY + this.size  - 1],
+      [newX, newY + this.size - 1],
+      [newX + this.size - 1, newY + this.size - 1],
     ];
 
-    for(const [x,y] of corners) {
-      if(!map.isWalkable(x,y)) return false;
+    for (const [x, y] of corners) {
+      if (!map.isWalkable(x, y)) return false;
     }
 
     return true;
   }
 
-  setDirection(vector: [MoveVector, MoveVector]) {    
-    if (Math.abs(this.vectorMove[0]) !== Math.abs(vector[0]) &&  Math.abs(this.vectorMove[1]) !== Math.abs(vector[1])){
+  setDirection(vector: [MoveVector, MoveVector]) {
+    if (Math.abs(this.vectorMove[0]) !== Math.abs(vector[0]) && Math.abs(this.vectorMove[1]) !== Math.abs(vector[1])) {
       this.snapToGrid()
     }
     this.vectorMove = vector;
@@ -523,12 +561,12 @@ class Tank {
         x = this.x
         y = this.y + config.CELL_HALF_SIZE * 2;
         break;
-    
+
       default:
         break;
     }
 
-    const newBullet = new Bullet(x, y, this.vectorMove, 0);
+    const newBullet = new Bullet(x, y, this.vectorMove, 0, 0);
     bullets.push(newBullet);
   }
 }
@@ -614,8 +652,8 @@ class InputManager {
 
     const keyEvent = keyMap[e.code];
 
-    if(keyEvent) {
-      if(keyEvent === "makeFire") {
+    if (keyEvent) {
+      if (keyEvent === "makeFire") {
         this.makeFire?.()
       }
     }
@@ -672,9 +710,9 @@ class Game {
 
     this.bullets = this.bullets.filter((bullet, i) => {
       // if the bullet is exploded then create an Explosion
-      if (bulletsStatuses[i].explode){
-        const {x, y} = bullet.getCoordinates();
-        this.explosions.push(new Explosion(x,y));
+      if (bulletsStatuses[i].explode) {
+        const { x, y } = bullet.getCoordinates();
+        this.explosions.push(new Explosion(x, y));
 
         // call Map and check collision with it and use the bullet dirrection
         this.map.doCollision(bullet);
