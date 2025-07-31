@@ -85,10 +85,10 @@ const map_01: TileType[][] = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 1, 3, 3, 1, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
@@ -105,11 +105,32 @@ class Map {
     this.map = map;
   }
 
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+  drawBottomLevel(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     for (let r = 0; r < this.map.length; r++) {
       for (let c = 0; c < this.map[r].length; c++) {
         const tile = this.map[r][c];
+        // skip if the tile is Bush
+        if (tile === tileTypes.BUSH) continue;
         if (tile !== tileTypes.EMPTY) {
+          const gridX = c * config.CELL_SIZE;
+          const gridY = r * config.CELL_SIZE;
+          const [spriteX, spriteY] = tileSpritePosition[tile]
+          ctx!.drawImage(
+            img,
+            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE_HALF, config.SPRITE_FRAME_SIZE_HALF, // add tank level 2sd * level
+            gridX, gridY, config.CELL_SIZE, config.CELL_SIZE
+          );
+        }
+      }
+    }
+  }
+
+  drawTopLevel(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    for (let r = 0; r < this.map.length; r++) {
+      for (let c = 0; c < this.map[r].length; c++) {
+        const tile = this.map[r][c];
+        // skip if the tile is Bush
+        if (tile === tileTypes.BUSH) {
           const gridX = c * config.CELL_SIZE;
           const gridY = r * config.CELL_SIZE;
           const [spriteX, spriteY] = tileSpritePosition[tile]
@@ -134,10 +155,21 @@ class Map {
     return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile)
   }
 
-  doCollision(bullet: Bullet) {
-    const corners = bullet.getHitboxCoordinates(); // 
-    const bulletDirection = bullet.getDirection();
+  isFlyable(x: number, y: number): boolean {
+    const c = Math.floor(x / config.CELL_SIZE);
+    const r = Math.floor(y / config.CELL_SIZE);
+    const tile = this.map?.[r]?.[c];
+    if (!tile) return true;
+    console.log({
+      r, c
+    })
+    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE, tileTypes.WATER] as TileType[]).includes(tile)
+  }
 
+  doCollision(bullet: Bullet) {
+    const corners = bullet.getFrontCorners(); // 
+
+    if (!corners) return;
     for(const corner of corners) {
       const [x,y] = corner;
       const c = Math.floor(x / config.CELL_SIZE);
@@ -247,6 +279,10 @@ class Bullet {
     return this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] as keyof typeof bulletWithDirection;
   }
 
+  directonToString() {
+    return `${this.direction[0]},${this.direction[1]}`
+  }
+
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     const indOfDir = this.getStringDirecrtion();
     const aa = bulletWithDirection[indOfDir];
@@ -307,7 +343,7 @@ class Bullet {
       ];
 
       for(const [x,y] of corners) {
-        if(!map.isWalkable(x,y)) return {
+        if(!map.isFlyable(x,y)) return {
           explode: true,
           point: {
             x: newX,
@@ -326,11 +362,38 @@ class Bullet {
 
   getHitboxCoordinates() {
     return [
-      [this.x, this.y],
-      [this.x + this.size /2, this.y],
-      [this.x + this.size / 2, this.y + this.size / 2],
-      [this.x, this.y + this.size /2],
+      [this.x, this.y], // left-top
+      [this.x + this.size /2, this.y], // right-top
+      [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
+      [this.x, this.y + this.size /2], // left-bottom
     ]
+  }
+
+  getFrontCorners(){
+    const dir = this.directonToString();
+
+    switch(dir){
+      case "0,-1": // up
+        return [
+          [this.x, this.y], // left-top
+          [this.x + this.size /2, this.y], // right-top
+        ];
+      case "-1,0": // left
+        return [
+          [this.x, this.y], // left-top
+          [this.x, this.y + this.size /2], // left-bottom
+        ];
+      case "0,1": // down
+        return [
+          [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
+      [this.x, this.y + this.size /2], // left-bottom
+        ];
+      case "1,0": // right
+        return [
+          [this.x + this.size /2, this.y], // right-top
+          [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
+        ];
+    }
   }
 
   getDirection() {
@@ -632,7 +695,7 @@ class Game {
 
   render() {
     this.renderer.clear();
-    this.map.draw(this.renderer.getContext(), this.spriteImg);
+    this.map.drawBottomLevel(this.renderer.getContext(), this.spriteImg);
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
 
     // loop through all bullets to render it
@@ -643,6 +706,8 @@ class Game {
     this.explosions.forEach((explosion) => {
       explosion.draw(this.renderer.getContext(), this.spriteImg)
     });
+
+    this.map.drawTopLevel(this.renderer.getContext(), this.spriteImg);
   }
 }
 
