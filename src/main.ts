@@ -213,7 +213,7 @@ class Map {
 type HostEnemy = 1;
 type HostDefender = 0;
 
-type BelongsTo = HostDefender | HostEnemy;
+type BelongsTo = number;
 
 // [sx_on_Sprite,sy_on_Sprite, x_display_correction, y_display_correction]
 const bulletWithDirection = {
@@ -298,7 +298,11 @@ class Bullet {
     this.direction = direction;
     this.belongTo = belongTo;
     this.bulletType = bulletType;
-    // this.bulletVelosity += bulletType * 0.2
+    this.bulletVelosity += bulletType * 0.2
+  }
+
+  getBelongsTo(){
+    return this.belongTo;
   }
 
   getCoordinates() {
@@ -440,6 +444,7 @@ class Bullet {
 }
 
 class Tank {
+  private ID: number;
   private isMovingTank = false;
   private tankVelosity = .1; //px per Msecond
   private multiplyTankVelosity = 2.2;
@@ -457,7 +462,8 @@ class Tank {
   private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
   private level: TankLevel;
 
-  constructor(level: TankLevel = 0) {
+  constructor(tankID: number, level: TankLevel = 0) {
+    this.ID = tankID;
     this.level = level;
   }
 
@@ -538,8 +544,13 @@ class Tank {
   }
 
   fire(bullets: Bullet[]) {
-    console.log("-".repeat(20))
-    console.log(this.x, this.y, this.vectorMove)
+    // console.log("-".repeat(20))
+    // console.log(this.x, this.y, this.vectorMove)
+
+    // check if the game has one more your bullet | Tank level 0,1 -> 1 bullet
+    if([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
+    // Tank level 2,3 -> 2 bullet
+    if([2, 3].includes(this.level) && bullets.filter(bullet => bullet.getBelongsTo() === this.ID).length >= 2) return;
 
     let x = this.x;
     let y = this.y;
@@ -566,7 +577,8 @@ class Tank {
         break;
     }
 
-    const newBullet = new Bullet(x, y, this.vectorMove, 0, 0);
+    const bulletType = this.level > 0 ? 1 : 0;
+    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, bulletType);
     bullets.push(newBullet);
   }
 }
@@ -676,7 +688,7 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank();
+    this.player1 = new Tank(0, 1);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
