@@ -274,6 +274,72 @@ class Explosion {
   }
 }
 
+// type BounusType = "GUN" | "TANK" | "STAR" | "BOMB" | "SHOVEL" | "TIME" | "HELMET"
+
+// const tileBonusPossition = {
+//   0: [16, 7], // "HELMET"
+//   1: [16, 8], // "TIME"
+//   2: [16, 9], // "SHOVEL"
+//   3: [16, 10], // "STAR"
+//   4: [16, 11], // "BOMB"
+//   5: [16, 12], // "TANK"
+//   6: [16, 13], // "GUN"
+// }
+
+const tileBonusPossition = {
+  HELMET: [16, 7], // "HELMET"
+  TIME: [17, 7], // "TIME"
+  SHOVEL: [18, 7], // "SHOVEL"
+  STAR: [19, 7], // "STAR"
+  BOMB: [20, 7], // "BOMB"
+  TANK: [21, 7], // "TANK"
+  GUN: [22, 7], // "GUN"
+}
+
+type BounusType = keyof typeof tileBonusPossition;
+
+class Bonus {
+  private type: BounusType;
+  private x = 0;
+  private y = 0;
+  private size = config.CELL_SIZE * 2;
+
+  constructor(type: BounusType, x: number, y: number) {
+    this.type = type;
+    this.x = x;
+    this.y = y;
+  }
+
+  applyBonus(cb: () => void) {
+    cb();
+  }
+
+  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+    const { 0: x, 1: y } = tileBonusPossition[this.type]
+    ctx!.drawImage(
+      img,
+      x * config.SPRITE_FRAME_SIZE, y * config.SPRITE_FRAME_SIZE,
+      config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
+      this.x, this.y,
+      this.size, this.size// CONST
+    );
+  }
+
+  hasCollision({ x, y }: { x: number, y: number }) {
+    if (
+      this.x < x + this.size &&
+      this.x + this.size > x &&
+      this.y < y + this.size &&
+      this.y + this.size > y
+    ) return true;
+    return false;
+  }
+
+  getType() {
+    return this.type;
+  }
+}
+
 type BulletType = 0 | 1 | 2;
 
 class Bullet {
@@ -301,7 +367,7 @@ class Bullet {
     this.bulletVelosity += bulletType * 0.2
   }
 
-  getBelongsTo(){
+  getBelongsTo() {
     return this.belongTo;
   }
 
@@ -467,6 +533,14 @@ class Tank {
     this.level = level;
   }
 
+  updateTankLevel() {
+    this.level = clamp(this.level + 1, 0, 3) as TankLevel;
+  }
+
+  updateTankGun() {
+
+  }
+
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     ctx.imageSmoothingEnabled = false;
     const x = this.getSpriteOffetX();
@@ -491,8 +565,11 @@ class Tank {
     return this.tankVelosity;
   }
 
-  move(deltaTime: number, map: Map) {
-    if (!this.isMovingTank) return;
+  move(deltaTime: number, map: Map): { x: number, y: number } {
+    if (!this.isMovingTank) return {
+      x: this.x,
+      y: this.y
+    };
 
     this.spriteAnimationTimer += deltaTime;
     if (this.spriteAnimationTimer >= config.SPRITE_MOVING_ANIMATION_INTERVAL) {
@@ -508,6 +585,11 @@ class Tank {
     if (this.canMove(newX, newY, map)) {
       this.x = newX;
       this.y = newY;
+    }
+
+    return {
+      x: this.x,
+      y: this.y
     }
   }
 
@@ -548,9 +630,9 @@ class Tank {
     // console.log(this.x, this.y, this.vectorMove)
 
     // check if the game has one more your bullet | Tank level 0,1 -> 1 bullet
-    if([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
+    if ([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
     // Tank level 2,3 -> 2 bullet
-    if([2, 3].includes(this.level) && bullets.filter(bullet => bullet.getBelongsTo() === this.ID).length >= 2) return;
+    if ([2, 3].includes(this.level) && bullets.filter(bullet => bullet.getBelongsTo() === this.ID).length >= 2) return;
 
     let x = this.x;
     let y = this.y;
@@ -685,14 +767,20 @@ class Game {
   private map: Map;
   private bullets: Bullet[] = [];
   private explosions: Explosion[] = [];
+  private bonuses: Bonus[] = [];
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 1);
+    this.player1 = new Tank(0, 0);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
     this.map = new Map(map_01);
+
+    this.bonuses.push(new Bonus("STAR", 70, 70));
+    this.bonuses.push(new Bonus("STAR", 270, 70));
+    this.bonuses.push(new Bonus("STAR", 470, 70));
+    this.bonuses.push(new Bonus("STAR", 470, 270));
   }
 
   setInputCbs() {
@@ -714,7 +802,27 @@ class Game {
     const deltaTime = timestamp - this.lastTimeStamp;
     this.lastTimeStamp = timestamp;
 
-    this.player1.move(deltaTime, this.map);
+    const tank1Coordinates = this.player1.move(deltaTime, this.map);
+    this.bonuses = this.bonuses.filter((bonus) => {
+      // if has collision with the tank do bonus and return false
+      const res = bonus.hasCollision(tank1Coordinates);
+      // console.log("res", res)
+
+      if (res) {
+        switch (bonus.getType()) {
+          case "STAR":
+            this.player1.updateTankLevel();
+            break;
+          case "GUN":
+            this.player1.updateTankGun();
+            break;
+        }
+      }
+
+
+      return !res;
+    });
+
     // loop through all bullets to move it
     const bulletsStatuses = this.bullets.map((bullet, i) => {
       return bullet.move(deltaTime, this.map);
@@ -755,6 +863,10 @@ class Game {
 
     this.explosions.forEach((explosion) => {
       explosion.draw(this.renderer.getContext(), this.spriteImg)
+    });
+
+    this.bonuses.forEach((bonus) => {
+      bonus.draw(this.renderer.getContext(), this.spriteImg);
     });
 
     this.map.drawTopLevel(this.renderer.getContext(), this.spriteImg);
