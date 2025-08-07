@@ -178,7 +178,7 @@ class Map {
       const tile = this.map?.[r]?.[c];
 
       if (tile) {
-        if (bulletType === 0) {
+        if (bulletType === 0 || bulletType === 1) {
           if (([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
             this.map[r][c] = 0;
           } else if (tileTypes.BRICK === tile) {
@@ -199,12 +199,9 @@ class Map {
                 break;
             }
           }
-        } else if (bulletType === 1 && ([tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
+        } else if (bulletType === 2 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
           this.map[r][c] = 0;
-        } else if (bulletType === 2) {
-          this.map[r][c] = 0;
-        }
-
+        } 
       }
     }
   }
@@ -343,7 +340,7 @@ class Bonus {
 type BulletType = 0 | 1 | 2;
 
 class Bullet {
-  private bulletVelosity = .2; //px per Msecond
+  private bulletVelosity = .3; //px per Msecond
   private x = 0;
   private y = 0;
   private direction: Direction; // [dX, dY]
@@ -364,7 +361,7 @@ class Bullet {
     this.direction = direction;
     this.belongTo = belongTo;
     this.bulletType = bulletType;
-    this.bulletVelosity += bulletType * 0.2
+    this.bulletVelosity += bulletType * 0.45
   }
 
   getBelongsTo() {
@@ -527,6 +524,7 @@ class Tank {
   private spriteAnimationTimer: number = 0;
   private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
   private level: TankLevel;
+  private bulletType: BulletType = 0;
 
   constructor(tankID: number, level: TankLevel = 0) {
     this.ID = tankID;
@@ -535,6 +533,18 @@ class Tank {
 
   updateTankLevel() {
     this.level = clamp(this.level + 1, 0, 3) as TankLevel;
+    switch (this.level) {
+      case 0:
+        this.bulletType = 0;
+        break;
+      case 1:
+      case 2:
+        this.bulletType = 1;
+        break;
+      case 3:
+        this.bulletType = 2;
+        break;
+    }
   }
 
   updateTankGun() {
@@ -626,9 +636,6 @@ class Tank {
   }
 
   fire(bullets: Bullet[]) {
-    // console.log("-".repeat(20))
-    // console.log(this.x, this.y, this.vectorMove)
-
     // check if the game has one more your bullet | Tank level 0,1 -> 1 bullet
     if ([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
     // Tank level 2,3 -> 2 bullet
@@ -659,8 +666,7 @@ class Tank {
         break;
     }
 
-    const bulletType = this.level > 0 ? 1 : 0;
-    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, bulletType);
+    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, this.bulletType); // 
     bullets.push(newBullet);
   }
 }
