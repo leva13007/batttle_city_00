@@ -91,7 +91,7 @@ type TileType = typeof tileTypes[keyof typeof tileTypes]
 
 const map_01: TileType[][] = [
   [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
-  [0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
+  [0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 3, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 4, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
   [0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,],
@@ -125,15 +125,15 @@ class Map {
     this.map = map;
   }
 
-  drawBottomLevel(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+  drawBottomLayer(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     for (let r = 0; r < this.map.length; r++) {
       for (let c = 0; c < this.map[r].length; c++) {
         const tile = this.map[r][c];
         // skip if the tile is Bush
         if (tile === tileTypes.BUSH) continue;
         if (tile !== tileTypes.EMPTY) {
-          const gridX = c * config.CELL_SIZE;
-          const gridY = r * config.CELL_SIZE;
+          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2;
+          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2;
           const [spriteX, spriteY] = tileSpritePosition[tile]
           ctx!.drawImage(
             img,
@@ -145,14 +145,14 @@ class Map {
     }
   }
 
-  drawTopLevel(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+  drawTopLayer(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     for (let r = 0; r < this.map.length; r++) {
       for (let c = 0; c < this.map[r].length; c++) {
         const tile = this.map[r][c];
         // skip if the tile is Bush
         if (tile === tileTypes.BUSH) {
-          const gridX = c * config.CELL_SIZE;
-          const gridY = r * config.CELL_SIZE;
+          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2;
+          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2;
           const [spriteX, spriteY] = tileSpritePosition[tile]
           ctx!.drawImage(
             img,
@@ -165,8 +165,8 @@ class Map {
   }
 
   isWalkable(x: number, y: number): boolean {
-    const c = Math.floor(x / config.CELL_SIZE);
-    const r = Math.floor(y / config.CELL_SIZE);
+    const c = Math.floor(x / config.CELL_SIZE) - 2;
+    const r = Math.floor(y / config.CELL_SIZE) - 2;
     const tile = this.map?.[r]?.[c];
     if (!tile) return true;
     console.log({
@@ -176,8 +176,8 @@ class Map {
   }
 
   isFlyable(x: number, y: number): boolean {
-    const c = Math.floor(x / config.CELL_SIZE);
-    const r = Math.floor(y / config.CELL_SIZE);
+    const c = Math.floor(x / config.CELL_SIZE) - 2;
+    const r = Math.floor(y / config.CELL_SIZE) - 2;
     const tile = this.map?.[r]?.[c];
     if (!tile) return true;
     console.log({
@@ -193,8 +193,8 @@ class Map {
     if (!corners) return;
     for (const corner of corners) {
       const [x, y] = corner;
-      const c = Math.floor(x / config.CELL_SIZE);
-      const r = Math.floor(y / config.CELL_SIZE);
+      const c = Math.floor(x / config.CELL_SIZE) - 2;
+      const r = Math.floor(y / config.CELL_SIZE) - 2;
       const tile = this.map?.[r]?.[c];
 
       if (tile) {
@@ -247,11 +247,11 @@ const tileBulletPossition = {
 type ExplosionFrames = 0 | 1 | 2;
 
 
-const x1 = 12 * config.CELL_SIZE;
-const y1 = 24 * config.CELL_SIZE;
+const x1 = 12 * config.CELL_SIZE + config.CELL_SIZE * 2;
+const y1 = 24 * config.CELL_SIZE + config.CELL_SIZE * 2;
 
-const x2 = 11 * config.CELL_SIZE;
-const y2 = 23 * config.CELL_SIZE;
+const x2 = 11 * config.CELL_SIZE + config.CELL_SIZE * 2;
+const y2 = 23 * config.CELL_SIZE + config.CELL_SIZE * 2;
 
 const s1 = config.CELL_SIZE * 2;
 const s2 = config.CELL_SIZE * 4;
@@ -499,10 +499,10 @@ class Bullet {
     // check if it outs of the Grid
     const hitBox = this.getHitbox();
     if (
-      this.x < 0 ||
-      this.y < 0 ||
-      this.x + hitBox[0] > config.GRID_SIZE ||
-      this.y + hitBox[1] > config.GRID_SIZE
+      this.x < config.CELL_SIZE * 2 ||
+      this.y < config.CELL_SIZE * 2 ||
+      this.x + hitBox[0] > config.GRID_SIZE + config.CELL_SIZE * 2 ||
+      this.y + hitBox[1] > config.GRID_SIZE + config.CELL_SIZE * 2
     ) {
       return {
         explode: true,
@@ -671,8 +671,8 @@ class Tank {
 
     const distance = this.getTankSpeed() * deltaTime;
 
-    const newX = clamp(this.x + distance * this.vectorMove[0], 0, config.GRID_SIZE - this.size);
-    const newY = clamp(this.y + distance * this.vectorMove[1], 0, config.GRID_SIZE - this.size);
+    const newX = clamp(this.x + distance * this.vectorMove[0], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
+    const newY = clamp(this.y + distance * this.vectorMove[1], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
 
     if (this.canMove(newX, newY, map)) {
       this.x = newX;
@@ -775,6 +775,14 @@ class Renderer {
     return config.CELL_COUNT * config.CELL_SIZE;
   }
 
+  getWidth() {
+    return this.gridSize() + config.CELL_SIZE * 6;
+  }
+
+  getHeight() {
+    return this.gridSize() + config.CELL_SIZE * 4;
+  }
+
   setup() {
     document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <canvas id="canvas" ></canvas>
@@ -782,14 +790,14 @@ class Renderer {
 
     const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 
-    canvas.width = this.gridSize();
-    canvas.height = this.gridSize();
+    canvas.width = this.getWidth();
+    canvas.height = this.getHeight();
 
     this.ctx = canvas!.getContext("2d") as CanvasRenderingContext2D; // TODO fix it
   }
 
   clear() {
-    this.ctx!.clearRect(0, 0, config.GRID_SIZE, config.GRID_SIZE);
+    this.ctx!.clearRect(0, 0, this.getWidth(), this.getHeight());
   }
 
   getContext() {
@@ -862,7 +870,7 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 0, 8 * config.CELL_SIZE, 24 * config.CELL_SIZE, [0,-1]);
+    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, [0,-1]);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
@@ -960,7 +968,14 @@ class Game {
 
   render() {
     this.renderer.clear();
-    this.map.drawBottomLevel(this.renderer.getContext(), this.spriteImg);
+
+    this.renderer.getContext()!.fillStyle = "grey";
+    this.renderer.getContext()!.fillRect(0, 0, this.renderer.getWidth(), this.renderer.getHeight());
+
+    this.renderer.getContext()!.fillStyle = "black";
+    this.renderer.getContext()!.fillRect(config.CELL_SIZE*2, config.CELL_SIZE*2, this.renderer.gridSize(), this.renderer.gridSize());
+
+    this.map.drawBottomLayer(this.renderer.getContext(), this.spriteImg);
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
 
     // loop through all bullets to render it
@@ -980,9 +995,14 @@ class Game {
       this.explosionBase.isFinished() ? null : this.explosionBase.draw(this.renderer.getContext(), this.spriteImg)
     }
 
-    this.map.drawTopLevel(this.renderer.getContext(), this.spriteImg);
+    this.map.drawTopLayer(this.renderer.getContext(), this.spriteImg);
 
-    // if (config.debug) {
+    if (config.debug) {
+      // The hitbox of The Base
+      this.renderer.getContext().lineWidth = 2;
+      this.renderer.getContext().strokeStyle = "yellow";
+      this.renderer.getContext().strokeRect(base.x, base.y, base.size, base.size);
+    
     //   this.renderer.getContext().lineWidth = 2;
     //   this.renderer.getContext().strokeStyle = "yellow";
     //   this.renderer.getContext().strokeRect(360, 720, base.size, base.size);
@@ -991,7 +1011,7 @@ class Game {
     //   this.renderer.getContext().lineWidth = 2;
     //   this.renderer.getContext().strokeStyle = "red";
     //   this.renderer.getContext().strokeRect(333, 720, base.size, base.size);
-    // }
+    }
   }
 }
 
