@@ -604,6 +604,7 @@ class Tank {
   private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
   private level: TankLevel;
   private bulletType: BulletType = 0;
+  private lives: number = 3;
 
   constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1]) {
     this.ID = tankID;
@@ -611,6 +612,10 @@ class Tank {
     this.x = x;
     this.y = y;
     this.vectorMove = vector;
+  }
+
+  getLives() {
+    return clamp(this.lives, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   }
 
   updateTankLevel() {
@@ -853,6 +858,19 @@ class InputManager {
   }
 }
 
+const matchNumbers = {
+  0: [20.5, 11.5],
+  1: [21, 11.5],
+  2: [21.5, 11.5],
+  3: [22, 11.5],
+  4: [22.5, 11.5],
+  5: [20.5, 12],
+  6: [21, 12],
+  7: [21.5, 12],
+  8: [22, 12],
+  9: [22.5, 12],
+}
+
 class Game {
 
   private renderer: Renderer;
@@ -867,6 +885,8 @@ class Game {
   private explosionBase: ExplosionBase | undefined;
   private isGameOver = false;
   private isBaseDestroyed = false;
+
+  private enemyCount = 20;
 
   constructor() {
     this.spriteImg = new Image();
@@ -969,7 +989,7 @@ class Game {
   render() {
     this.renderer.clear();
 
-    this.renderer.getContext()!.fillStyle = "grey";
+    this.renderer.getContext()!.fillStyle = "#636363";
     this.renderer.getContext()!.fillRect(0, 0, this.renderer.getWidth(), this.renderer.getHeight());
 
     this.renderer.getContext()!.fillStyle = "black";
@@ -996,6 +1016,35 @@ class Game {
     }
 
     this.map.drawTopLayer(this.renderer.getContext(), this.spriteImg);
+
+    // display enemys at the meta field
+    for (let i = 0; i < this.enemyCount; i++) {
+      this.renderer.getContext()!.drawImage(
+        this.spriteImg,
+        (config.SPRITE_FRAME_SIZE ) * 20, (config.SPRITE_FRAME_SIZE) * 12,
+        config.SPRITE_FRAME_SIZE / 2, config.SPRITE_FRAME_SIZE / 2, // add tank level 2sd * level
+
+        (config.CELL_SIZE * (26 + 2 + 1)) + (config.CELL_SIZE * (i % 2)), (config.CELL_SIZE * (3)) +(config.CELL_SIZE * Math.floor(i / 2)), 
+        
+        config.CELL_SIZE, config.CELL_SIZE,
+      );
+    }
+
+    // display 1st player lives
+    this.renderer.getContext()!.drawImage(
+      this.spriteImg,
+      (config.SPRITE_FRAME_SIZE ) * 23.5, (config.SPRITE_FRAME_SIZE) * 8.5,
+      config.SPRITE_FRAME_SIZE / 1, config.SPRITE_FRAME_SIZE / 1, // add tank level 2sd * level
+      (config.CELL_SIZE * (26 + 2 + 1)) , (config.CELL_SIZE * (3 + 13)), 
+      config.CELL_SIZE * 2, config.CELL_SIZE * 2,
+    );
+    this.renderer.getContext()!.drawImage(
+      this.spriteImg,
+      (config.SPRITE_FRAME_SIZE ) * matchNumbers[this.player1.getLives()][0], (config.SPRITE_FRAME_SIZE) * matchNumbers[this.player1.getLives()][1],
+      config.SPRITE_FRAME_SIZE / 2, config.SPRITE_FRAME_SIZE / 2, // add tank level 2sd * level
+      (config.CELL_SIZE * (26 + 2 + 2)) , (config.CELL_SIZE * (3 + 14)), 
+      config.CELL_SIZE, config.CELL_SIZE,
+    );
 
     if (config.debug) {
       // The hitbox of The Base
