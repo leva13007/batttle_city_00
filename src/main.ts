@@ -618,6 +618,10 @@ class Tank {
     return clamp(this.lives, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   }
 
+  updateTankLives(dL: 1 | -1) {
+    this.lives = clamp(this.lives + dL, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  }
+
   updateTankLevel() {
     this.level = clamp(this.level + 1, 0, 3) as TankLevel;
     switch (this.level) {
@@ -897,9 +901,12 @@ class Game {
     this.map = new Map(map_01);
 
     this.bonuses.push(new Bonus("STAR", 70, 70));
-    this.bonuses.push(new Bonus("STAR", 270, 70));
-    this.bonuses.push(new Bonus("STAR", 470, 70));
-    this.bonuses.push(new Bonus("STAR", 470, 270));
+    this.bonuses.push(new Bonus("TANK", 270, 70));
+    this.bonuses.push(new Bonus("TANK", 470, 70));
+
+    this.bonuses.push(new Bonus("GUN", 70, 270));
+
+    this.bonuses.push(new Bonus("TANK", 470, 270));
   }
 
   setInputCbs() {
@@ -934,6 +941,9 @@ class Game {
             break;
           case "GUN":
             this.player1.updateTankGun();
+            break;
+          case "TANK":
+            this.player1.updateTankLives(1);
             break;
         }
       }
