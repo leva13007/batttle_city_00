@@ -97,6 +97,14 @@ class Map {
     this.map = map;
   }
 
+  get length() {
+    return this.map.length;
+  }
+
+  getMapArray() {
+    return this.map;
+  }
+
   drawBottomLayer(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     for (let r = 0; r < this.map.length; r++) {
       for (let c = 0; c < this.map[r].length; c++) {
@@ -193,7 +201,7 @@ class Map {
           }
         } else if (bulletType === 2 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
           this.map[r][c] = 0;
-        } 
+        }
       }
     }
   }
@@ -250,11 +258,11 @@ class ExplosionBase {
   private explosionSpriteX = [16, 17, 18, 19, 21, 19, 18, 17, 16];
   private d = [d1, d1, d1, d2, d2, d2, d1, d1, d1];
 
-  constructor() {}
+  constructor() { }
   draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
     ctx!.drawImage(
       img,
-      (this.explosionSpriteX[this.frame]) * config.SPRITE_FRAME_SIZE,  8 * config.SPRITE_FRAME_SIZE,
+      (this.explosionSpriteX[this.frame]) * config.SPRITE_FRAME_SIZE, 8 * config.SPRITE_FRAME_SIZE,
       this.d[this.frame], this.d[this.frame], // CONST
       this.x[this.frame], this.y[this.frame],
       this.size[this.frame], this.size[this.frame] // CONST
@@ -578,12 +586,18 @@ class Tank {
   private bulletType: BulletType = 0;
   private lives: number = 3;
 
+  private isHelmetMode: boolean = false;
+  private helmetModeTimer: number = 0;
+  private helmetSpriteIndex: number = 0;
+
   constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1]) {
     this.ID = tankID;
     this.level = level;
     this.x = x;
     this.y = y;
     this.vectorMove = vector;
+    this.isHelmetMode = true;
+    this.helmetModeTimer = 3000;
   }
 
   getLives() {
@@ -592,6 +606,25 @@ class Tank {
 
   updateTankLives(dL: 1 | -1) {
     this.lives = clamp(this.lives + dL, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  }
+
+  update(deltaTime: number) {
+    // Update the tank's position, animation, etc.
+    if (this.isHelmetMode) {
+      this.helmetSpriteIndex++;
+      this.helmetModeTimer -= deltaTime;
+      if (this.helmetModeTimer <= 0) {
+        this.isHelmetMode = false;
+        this.helmetModeTimer = 0;
+        this.helmetSpriteIndex = 0;
+      }
+    }
+  }
+
+  setHelmetMode() {
+    this.isHelmetMode = true;
+    this.helmetModeTimer = 10000;
+    this.helmetSpriteIndex = 0;
   }
 
   updateTankLevel() {
@@ -620,9 +653,19 @@ class Tank {
     ctx!.drawImage(
       img,
       x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), (config.SPRITE_FRAME_SIZE * this.level),
-      config.SPRITE_FRAME_SIZE - 1, config.SPRITE_FRAME_SIZE - 1, // add tank level 2sd * level
+      config.SPRITE_FRAME_SIZE - 0, config.SPRITE_FRAME_SIZE - 0, // add tank level 2sd * level
       this.x, this.y, this.size, this.size
     );
+
+    if (this.isHelmetMode) {
+      ctx!.drawImage(
+        img,
+        16 * (16 + Math.floor(this.helmetSpriteIndex/4) % 2), 16 * 9,
+        config.SPRITE_FRAME_SIZE - 0, config.SPRITE_FRAME_SIZE - 0, // add tank level 2sd * level
+        this.x, this.y, this.size, this.size
+      );
+    }
+
     if (config.debug) {
       ctx.strokeStyle = "green";
       ctx.strokeRect(this.x, this.y, this.size, this.size);
@@ -871,19 +914,19 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, [0,-1]);
+    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, [0, -1]);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
     this.map = new Map(getMap(this.gameLevel));
 
-    // this.bonuses.push(new Bonus("HELMET", 70, 70));
+    // this.bonuses.push(new Bonus("HELMET", 270, 670));
     // this.bonuses.push(new Bonus("TANK", 270, 70));
     // this.bonuses.push(new Bonus("TIME", 470, 70));
 
     // this.bonuses.push(new Bonus("GUN", 70, 270));
 
-    // this.bonuses.push(new Bonus("SHOVEL", 270, 670));
+    this.bonuses.push(new Bonus("HELMET", 270, 670));
   }
 
   setInputCbs() {
@@ -923,52 +966,51 @@ class Game {
             break;
           case "SHOVEL":
             this.isShovelMode = true;
-            this.shovelModeTimer = 21000 * 4; // 4 when it picked up by defenders and 1 when it picked up by attackers
+            this.shovelModeTimer = 5000 * 4; // 4 when it picked up by defenders and 1 when it picked up by attackers
             break;
-
+          case "HELMET":
+            this.player1.setHelmetMode();
+            break;
 
           case "BOMB":
             break;
           case "TIME":
             break;
-          case "HELMET":
-            break;
+          
         }
       }
 
-
-      if(this.shovelModeTimer <= 0 && this.isShovelMode){
-        this.isShovelMode = false;
-        this.shovelModeTimer = 0;
-
-        map_01[map_01.length-3][11] = 1;
-        map_01[map_01.length-3][12] = 1;
-        map_01[map_01.length-3][13] = 1;
-        map_01[map_01.length-3][14] = 1;
-
-        map_01[map_01.length-2][11] = 1;
-        map_01[map_01.length-2][14] = 1;
-        map_01[map_01.length-1][11] = 1;
-        map_01[map_01.length-1][14] = 1;
-      } 
-      
-      if(this.isShovelMode){
-        this.shovelModeTimer -= deltaTime;
-        // who picked up the bonus? if defenders then set walls to stone
-        map_01[map_01.length-3][11] = 2;
-        map_01[map_01.length-3][12] = 2;
-        map_01[map_01.length-3][13] = 2;
-        map_01[map_01.length-3][14] = 2;
-
-        map_01[map_01.length-2][11] = 2;
-        map_01[map_01.length-2][14] = 2;
-        map_01[map_01.length-1][11] = 2;
-        map_01[map_01.length-1][14] = 2;
-      }
-
-
       return !res;
     });
+
+    if (this.shovelModeTimer <= 0 && this.isShovelMode) {
+      this.isShovelMode = false;
+      this.shovelModeTimer = 0;
+
+      this.map.getMapArray()[this.map.length - 3][11] = 1;
+      this.map.getMapArray()[this.map.length - 3][12] = 1;
+      this.map.getMapArray()[this.map.length - 3][13] = 1;
+      this.map.getMapArray()[this.map.length - 3][14] = 1;
+
+      this.map.getMapArray()[this.map.length - 2][11] = 1;
+      this.map.getMapArray()[this.map.length - 2][14] = 1;
+      this.map.getMapArray()[this.map.length - 1][11] = 1;
+      this.map.getMapArray()[this.map.length - 1][14] = 1;
+    }
+
+    if (this.isShovelMode) {
+      this.shovelModeTimer -= deltaTime;
+      // who picked up the bonus? if defenders then set walls to stone
+      this.map.getMapArray()[this.map.length - 3][11] = 2;
+      this.map.getMapArray()[this.map.length - 3][12] = 2;
+      this.map.getMapArray()[this.map.length - 3][13] = 2;
+      this.map.getMapArray()[this.map.length - 3][14] = 2;
+
+      this.map.getMapArray()[this.map.length - 2][11] = 2;
+      this.map.getMapArray()[this.map.length - 2][14] = 2;
+      this.map.getMapArray()[this.map.length - 1][11] = 2;
+      this.map.getMapArray()[this.map.length - 1][14] = 2;
+    }
 
     // loop through all bullets to move it
     const bulletsStatuses = this.bullets.map((bullet, i) => {
@@ -988,10 +1030,10 @@ class Game {
         ) {
           this.isBaseDestroyed = true;
           this.isGameOver = true;
-          map_01[map_01.length-2][12] = 14;
-          map_01[map_01.length-2][13] = 15;
-          map_01[map_01.length-1][12] = 16;
-          map_01[map_01.length-1][13] = 17;
+          this.map.getMapArray()[this.map.length - 2][12] = 14;
+          this.map.getMapArray()[this.map.length - 2][13] = 15;
+          this.map.getMapArray()[this.map.length - 1][12] = 16;
+          this.map.getMapArray()[this.map.length - 1][13] = 17;
           this.explosionBase = new ExplosionBase();
         }
 
@@ -1000,6 +1042,10 @@ class Game {
       }
       return !bulletsStatuses[i].explode;
     });
+
+    // loop through the tanks to call update it
+    this.player1.update(deltaTime);
+    // this.player2.update(deltaTime);
 
     // loop through explosions and check if it still explodes
     this.explosions = this.explosions.filter((explosion) => {
@@ -1021,7 +1067,7 @@ class Game {
     this.renderer.getContext()!.fillRect(0, 0, this.renderer.getWidth(), this.renderer.getHeight());
 
     this.renderer.getContext()!.fillStyle = "black";
-    this.renderer.getContext()!.fillRect(config.CELL_SIZE*2, config.CELL_SIZE*2, this.renderer.gridSize(), this.renderer.gridSize());
+    this.renderer.getContext()!.fillRect(config.CELL_SIZE * 2, config.CELL_SIZE * 2, this.renderer.gridSize(), this.renderer.gridSize());
 
     this.map.drawBottomLayer(this.renderer.getContext(), this.spriteImg);
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
@@ -1049,11 +1095,11 @@ class Game {
     for (let i = 0; i < this.enemyCount; i++) {
       this.renderer.getContext()!.drawImage(
         this.spriteImg,
-        (config.SPRITE_FRAME_SIZE ) * 20, (config.SPRITE_FRAME_SIZE) * 12,
+        (config.SPRITE_FRAME_SIZE) * 20, (config.SPRITE_FRAME_SIZE) * 12,
         config.SPRITE_FRAME_SIZE / 2, config.SPRITE_FRAME_SIZE / 2, // add tank level 2sd * level
 
-        (config.CELL_SIZE * (26 + 2 + 1)) + (config.CELL_SIZE * (i % 2)), (config.CELL_SIZE * (3)) +(config.CELL_SIZE * Math.floor(i / 2)), 
-        
+        (config.CELL_SIZE * (26 + 2 + 1)) + (config.CELL_SIZE * (i % 2)), (config.CELL_SIZE * (3)) + (config.CELL_SIZE * Math.floor(i / 2)),
+
         config.CELL_SIZE, config.CELL_SIZE,
       );
     }
@@ -1061,16 +1107,16 @@ class Game {
     // display 1st player lives
     this.renderer.getContext()!.drawImage(
       this.spriteImg,
-      (config.SPRITE_FRAME_SIZE ) * 23.5, (config.SPRITE_FRAME_SIZE) * 8.5,
+      (config.SPRITE_FRAME_SIZE) * 23.5, (config.SPRITE_FRAME_SIZE) * 8.5,
       config.SPRITE_FRAME_SIZE / 1, config.SPRITE_FRAME_SIZE / 1, // add tank level 2sd * level
-      (config.CELL_SIZE * (26 + 2 + 1)) , (config.CELL_SIZE * (3 + 13)), 
+      (config.CELL_SIZE * (26 + 2 + 1)), (config.CELL_SIZE * (3 + 13)),
       config.CELL_SIZE * 2, config.CELL_SIZE * 2,
     );
     this.renderer.getContext()!.drawImage(
       this.spriteImg,
-      (config.SPRITE_FRAME_SIZE ) * matchNumbers[this.player1.getLives()][0], (config.SPRITE_FRAME_SIZE) * matchNumbers[this.player1.getLives()][1],
+      (config.SPRITE_FRAME_SIZE) * matchNumbers[this.player1.getLives()][0], (config.SPRITE_FRAME_SIZE) * matchNumbers[this.player1.getLives()][1],
       config.SPRITE_FRAME_SIZE / 2, config.SPRITE_FRAME_SIZE / 2, // add tank level 2sd * level
-      (config.CELL_SIZE * (26 + 2 + 2)) , (config.CELL_SIZE * (3 + 14)), 
+      (config.CELL_SIZE * (26 + 2 + 2)), (config.CELL_SIZE * (3 + 14)),
       config.CELL_SIZE, config.CELL_SIZE,
     );
 
@@ -1079,15 +1125,15 @@ class Game {
       this.renderer.getContext().lineWidth = 2;
       this.renderer.getContext().strokeStyle = "yellow";
       this.renderer.getContext().strokeRect(base.x, base.y, base.size, base.size);
-    
-    //   this.renderer.getContext().lineWidth = 2;
-    //   this.renderer.getContext().strokeStyle = "yellow";
-    //   this.renderer.getContext().strokeRect(360, 720, base.size, base.size);
+
+      //   this.renderer.getContext().lineWidth = 2;
+      //   this.renderer.getContext().strokeStyle = "yellow";
+      //   this.renderer.getContext().strokeRect(360, 720, base.size, base.size);
 
 
-    //   this.renderer.getContext().lineWidth = 2;
-    //   this.renderer.getContext().strokeStyle = "red";
-    //   this.renderer.getContext().strokeRect(333, 720, base.size, base.size);
+      //   this.renderer.getContext().lineWidth = 2;
+      //   this.renderer.getContext().strokeStyle = "red";
+      //   this.renderer.getContext().strokeRect(333, 720, base.size, base.size);
     }
   }
 }
