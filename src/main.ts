@@ -890,6 +890,9 @@ class Game {
   private isGameOver = false;
   private isBaseDestroyed = false;
 
+  private isShovelMode = false;
+  private shovelModeTimer = 0;
+
   private enemyCount = 20;
 
   constructor() {
@@ -900,13 +903,13 @@ class Game {
     this.setInputCbs();
     this.map = new Map(map_01);
 
-    this.bonuses.push(new Bonus("STAR", 70, 70));
+    this.bonuses.push(new Bonus("HELMET", 70, 70));
     this.bonuses.push(new Bonus("TANK", 270, 70));
-    this.bonuses.push(new Bonus("TANK", 470, 70));
+    this.bonuses.push(new Bonus("TIME", 470, 70));
 
     this.bonuses.push(new Bonus("GUN", 70, 270));
 
-    this.bonuses.push(new Bonus("TANK", 470, 270));
+    this.bonuses.push(new Bonus("SHOVEL", 270, 670));
   }
 
   setInputCbs() {
@@ -933,7 +936,6 @@ class Game {
       // if has collision with the tank do bonus and return false
       const res = bonus.hasCollision(tank1Coordinates);
       // console.log("res", res)
-
       if (res) {
         switch (bonus.getType()) {
           case "STAR":
@@ -945,7 +947,49 @@ class Game {
           case "TANK":
             this.player1.updateTankLives(1);
             break;
+          case "SHOVEL":
+            this.isShovelMode = true;
+            this.shovelModeTimer = 21000 * 4; // 4 when it picked up by defenders and 1 when it picked up by attackers
+            break;
+
+
+          case "BOMB":
+            break;
+          case "TIME":
+            break;
+          case "HELMET":
+            break;
         }
+      }
+
+
+      if(this.shovelModeTimer <= 0 && this.isShovelMode){
+        this.isShovelMode = false;
+        this.shovelModeTimer = 0;
+
+        map_01[map_01.length-3][11] = 1;
+        map_01[map_01.length-3][12] = 1;
+        map_01[map_01.length-3][13] = 1;
+        map_01[map_01.length-3][14] = 1;
+
+        map_01[map_01.length-2][11] = 1;
+        map_01[map_01.length-2][14] = 1;
+        map_01[map_01.length-1][11] = 1;
+        map_01[map_01.length-1][14] = 1;
+      } 
+      
+      if(this.isShovelMode){
+        this.shovelModeTimer -= deltaTime;
+        // who picked up the bonus? if defenders then set walls to stone
+        map_01[map_01.length-3][11] = 2;
+        map_01[map_01.length-3][12] = 2;
+        map_01[map_01.length-3][13] = 2;
+        map_01[map_01.length-3][14] = 2;
+
+        map_01[map_01.length-2][11] = 2;
+        map_01[map_01.length-2][14] = 2;
+        map_01[map_01.length-1][11] = 2;
+        map_01[map_01.length-1][14] = 2;
       }
 
 
