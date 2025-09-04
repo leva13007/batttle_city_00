@@ -1,13 +1,16 @@
 import { getMap } from './maps';
 import './style.css';
-import { clamp } from "gamekit-utils";
+import { Tank } from './tank';
+import { TankEnemy } from './tankEnemy';
 
-type MoveVector = -1 | 0 | 1;
-type Direction = [MoveVector, MoveVector];
-type SpriteAnimationFrameIdex = 0 | 1;
-type TankLevel = 0 | 1 | 2 | 3;
 
-const config = {
+export type MoveVector = -1 | 0 | 1;
+export type Direction = [MoveVector, MoveVector];
+
+export type BulletType = 0 | 1 | 2;
+
+
+export const config = {
   CELL_COUNT: 13 * 2,
   CELL_SIZE: 30,
   SPRITE_FRAME_SIZE: 16,
@@ -22,7 +25,7 @@ const config = {
   debug: true,
 }
 
-const tankDirections: Record<string, Direction> = {
+export const tankDirections: Record<string, Direction> = {
   UP: [0, -1],
   DOWN: [0, 1],
   LEFT: [-1, 0],
@@ -90,7 +93,7 @@ const tileSpritePosition = {
 
 export type TileType = typeof tileTypes[keyof typeof tileTypes]
 
-class Map {
+export class Map {
   private map: TileType[][];
 
   constructor(map: TileType[][]) {
@@ -396,9 +399,9 @@ class Bonus {
   }
 }
 
-type BulletType = 0 | 1 | 2;
 
-class Bullet {
+
+export class Bullet {
   private bulletVelosity = .3; //px per Msecond
   private x = 0;
   private y = 0;
@@ -565,217 +568,7 @@ class Bullet {
   }
 }
 
-class Tank {
-  private ID: number;
-  private isMovingTank = false;
-  private tankVelosity = .1; //px per Msecond
-  private multiplyTankVelosity = 2.2;
-  private x;
-  private y;
-  private size = config.CELL_SIZE * 2;
-  private vectorMove: Direction = [0, 1]; // [dX, dY]
-  private tank1DirrectionMap: Record<string, number> = {
-    "0,-1": 0, // up
-    "-1,0": 2, // left
-    "0,1": 4, // down
-    "1,0": 6, // right
-  }
-  private spriteAnimationTimer: number = 0;
-  private spriteAnimationFrameId: SpriteAnimationFrameIdex = 0;
-  private level: TankLevel;
-  private bulletType: BulletType = 0;
-  private lives: number = 3;
 
-  private isHelmetMode: boolean = false;
-  private helmetModeTimer: number = 0;
-  private helmetSpriteIndex: number = 0;
-
-  constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1]) {
-    this.ID = tankID;
-    this.level = level;
-    this.x = x;
-    this.y = y;
-    this.vectorMove = vector;
-    this.isHelmetMode = true;
-    this.helmetModeTimer = 3000;
-  }
-
-  getLives() {
-    return clamp(this.lives, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-  }
-
-  updateTankLives(dL: 1 | -1) {
-    this.lives = clamp(this.lives + dL, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-  }
-
-  update(deltaTime: number) {
-    // Update the tank's position, animation, etc.
-    if (this.isHelmetMode) {
-      this.helmetSpriteIndex++;
-      this.helmetModeTimer -= deltaTime;
-      if (this.helmetModeTimer <= 0) {
-        this.isHelmetMode = false;
-        this.helmetModeTimer = 0;
-        this.helmetSpriteIndex = 0;
-      }
-    }
-  }
-
-  setHelmetMode() {
-    this.isHelmetMode = true;
-    this.helmetModeTimer = 10000;
-    this.helmetSpriteIndex = 0;
-  }
-
-  updateTankLevel() {
-    this.level = clamp(this.level + 1, 0, 3) as TankLevel;
-    switch (this.level) {
-      case 0:
-        this.bulletType = 0;
-        break;
-      case 1:
-      case 2:
-        this.bulletType = 1;
-        break;
-      case 3:
-        this.bulletType = 2;
-        break;
-    }
-  }
-
-  updateTankGun() {
-
-  }
-
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    ctx.imageSmoothingEnabled = false;
-    const x = this.getSpriteOffetX();
-    ctx!.drawImage(
-      img,
-      x + (config.SPRITE_FRAME_SIZE * this.spriteAnimationFrameId), (config.SPRITE_FRAME_SIZE * this.level),
-      config.SPRITE_FRAME_SIZE - 0, config.SPRITE_FRAME_SIZE - 0, // add tank level 2sd * level
-      this.x, this.y, this.size, this.size
-    );
-
-    if (this.isHelmetMode) {
-      ctx!.drawImage(
-        img,
-        16 * (16 + Math.floor(this.helmetSpriteIndex/4) % 2), 16 * 9,
-        config.SPRITE_FRAME_SIZE - 0, config.SPRITE_FRAME_SIZE - 0, // add tank level 2sd * level
-        this.x, this.y, this.size, this.size
-      );
-    }
-
-    if (config.debug) {
-      ctx.strokeStyle = "green";
-      ctx.strokeRect(this.x, this.y, this.size, this.size);
-    }
-  }
-
-  getSpriteOffetX() {
-    return config.SPRITE_FRAME_SIZE * this.tank1DirrectionMap[`${this.vectorMove[0]},${this.vectorMove[1]}`];
-  }
-
-  getTankSpeed() {
-    if (this.level === 1) return this.tankVelosity * this.multiplyTankVelosity;
-    return this.tankVelosity;
-  }
-
-  move(deltaTime: number, map: Map): { x: number, y: number } {
-    if (!this.isMovingTank) return {
-      x: this.x,
-      y: this.y
-    };
-
-    this.spriteAnimationTimer += deltaTime;
-    if (this.spriteAnimationTimer >= config.SPRITE_MOVING_ANIMATION_INTERVAL) {
-      this.spriteAnimationFrameId = Number(!this.spriteAnimationFrameId) as SpriteAnimationFrameIdex
-      this.spriteAnimationTimer = 0;
-    }
-
-    const distance = this.getTankSpeed() * deltaTime;
-
-    const newX = clamp(this.x + distance * this.vectorMove[0], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
-    const newY = clamp(this.y + distance * this.vectorMove[1], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
-
-    if (this.canMove(newX, newY, map)) {
-      this.x = newX;
-      this.y = newY;
-    }
-
-    return {
-      x: this.x,
-      y: this.y
-    }
-  }
-
-  canMove(newX: number, newY: number, map: Map) {
-    // change to the Hit Box getter
-    const corners = [
-      [newX, newY],
-      [newX + this.size - 1, newY],
-      [newX, newY + this.size - 1],
-      [newX + this.size - 1, newY + this.size - 1],
-    ];
-
-    for (const [x, y] of corners) {
-      if (!map.isWalkable(x, y)) return false;
-    }
-
-    return true;
-  }
-
-  setDirection(vector: [MoveVector, MoveVector]) {
-    if (Math.abs(this.vectorMove[0]) !== Math.abs(vector[0]) && Math.abs(this.vectorMove[1]) !== Math.abs(vector[1])) {
-      this.snapToGrid()
-    }
-    this.vectorMove = vector;
-  }
-
-  snapToGrid() {
-    this.x = Math.round(this.x / config.CELL_SIZE) * config.CELL_SIZE;
-    this.y = Math.round(this.y / config.CELL_SIZE) * config.CELL_SIZE;
-  }
-
-  setMoving(moving: boolean) {
-    this.isMovingTank = moving;
-  }
-
-  fire(bullets: Bullet[]) {
-    // check if the game has one more your bullet | Tank level 0,1 -> 1 bullet
-    if ([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
-    // Tank level 2,3 -> 2 bullet
-    if ([2, 3].includes(this.level) && bullets.filter(bullet => bullet.getBelongsTo() === this.ID).length >= 2) return;
-
-    let x = this.x;
-    let y = this.y;
-
-    switch (`${this.vectorMove[0]},${this.vectorMove[1]}`) {
-      case "-1,0": // LEFT
-        x = this.x;
-        y = this.y;
-        break;
-      case "1,0": // RIGHT
-        x = this.x + config.CELL_HALF_SIZE;
-        y = this.y;
-        break;
-      case "0,-1": // UP
-        x = this.x
-        y = this.y;
-        break;
-      case "0,1": // DOWN
-        x = this.x
-        y = this.y + config.CELL_HALF_SIZE * 2;
-        break;
-
-      default:
-        break;
-    }
-
-    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, this.bulletType); // 
-    bullets.push(newBullet);
-  }
-}
 
 class AssetLoader {
   static async loadSprite(src: string): Promise<HTMLImageElement> {
@@ -895,12 +688,19 @@ class Game {
   private renderer: Renderer;
   private inputManager: InputManager;
   private lastTimeStamp = 0;
-  private player1: Tank;
   private spriteImg: HTMLImageElement;
   private map: Map;
+
+
+  private player1: Tank;
+  // private player2: Tank;
+  private enemies: TankEnemy[] = [];
+
   private bullets: Bullet[] = [];
   private explosions: Explosion[] = [];
   private bonuses: Bonus[] = [];
+
+
   private explosionBase: ExplosionBase | undefined;
   private isGameOver = false;
   private isBaseDestroyed = false;
@@ -914,7 +714,7 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, [0, -1]);
+    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, tankDirections.UP);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
@@ -927,6 +727,12 @@ class Game {
     // this.bonuses.push(new Bonus("GUN", 70, 270));
 
     this.bonuses.push(new Bonus("HELMET", 270, 670));
+
+    this.enemies = [
+      new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT),
+      new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1]),
+      new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT),
+    ];
   }
 
   setInputCbs() {
@@ -949,6 +755,9 @@ class Game {
     this.lastTimeStamp = timestamp;
 
     const tank1Coordinates = this.player1.move(deltaTime, this.map);
+
+    this.enemies.forEach(enemy => enemy.move(deltaTime, this.map));
+
     this.bonuses = this.bonuses.filter((bonus) => {
       // if has collision with the tank do bonus and return false
       const res = bonus.hasCollision(tank1Coordinates);
@@ -1046,6 +855,7 @@ class Game {
     // loop through the tanks to call update it
     this.player1.update(deltaTime);
     // this.player2.update(deltaTime);
+    this.enemies.forEach((enemy) => enemy.update(deltaTime));
 
     // loop through explosions and check if it still explodes
     this.explosions = this.explosions.filter((explosion) => {
@@ -1070,7 +880,9 @@ class Game {
     this.renderer.getContext()!.fillRect(config.CELL_SIZE * 2, config.CELL_SIZE * 2, this.renderer.gridSize(), this.renderer.gridSize());
 
     this.map.drawBottomLayer(this.renderer.getContext(), this.spriteImg);
+
     this.player1.draw(this.renderer.getContext(), this.spriteImg);
+    this.enemies.forEach(enemy => enemy.draw(this.renderer.getContext(), this.spriteImg));
 
     // loop through all bullets to render it
     this.bullets.forEach((bullet) => {
