@@ -384,7 +384,9 @@ class Bonus {
     );
   }
 
-  hasCollision({ x, y }: { x: number, y: number }) {
+  hasCollision(coor: { x: number, y: number } | null) {
+    if (!coor) return false;
+    const { x, y } = coor;
     if (
       this.x < x + this.size &&
       this.x + this.size > x &&
@@ -710,11 +712,11 @@ class Game {
 
   private enemyCount = 20;
 
-  private gameLevel = 2;
+  private gameLevel = 0;
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 0, (8 + 2) * config.CELL_SIZE, (24 + 2) * config.CELL_SIZE, tankDirections.UP);
+    this.player1 = new Tank(0, 1, (8 + 2 - 6) * config.CELL_SIZE, (24 + 2 - 22) * config.CELL_SIZE, tankDirections.UP);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
@@ -750,18 +752,55 @@ class Game {
     }
   }
 
+  // Method for Player 1
+  private size = config.CELL_SIZE * 2;
+  canTankMove(newX: number, newY: number, map: Map, tank: Tank) {
+    // change to the Hit Box getter
+    const corners = [
+      [newX, newY],
+      [newX + this.size - 1, newY],
+      [newX, newY + this.size - 1],
+      [newX + this.size - 1, newY + this.size - 1],
+    ];
+
+    for (const [x, y] of corners) {
+      if (!map.isWalkable(x, y)) return false;
+    }
+    // check collision with other Tanks
+    for (const enemy of [ ...this.enemies, this.player1]) {
+      if (enemy === tank) continue;
+      const { x, y } = enemy.getPosition();
+      if (
+        newX < x + this.size &&
+        newX + this.size > x &&
+        newY < y + this.size &&
+        newY + this.size > y
+      ) return false;
+    }
+
+    return true;
+  }
+
   private animate(timestamp: number): void {
     const deltaTime = timestamp - this.lastTimeStamp;
     this.lastTimeStamp = timestamp;
 
-    const tank1Coordinates = this.player1.move(deltaTime, this.map);
-
-    this.enemies.forEach(enemy => enemy.move(deltaTime, this.map));
+    let tank1Coordinates = null;
+    const potentialTank1Coordinates = this.player1.tankWantsToMove(deltaTime);
+    if (potentialTank1Coordinates && this.canTankMove(potentialTank1Coordinates.x, potentialTank1Coordinates.y, this.map, this.player1)) {
+      tank1Coordinates = potentialTank1Coordinates;
+      this.player1.doTankMove(potentialTank1Coordinates.x, potentialTank1Coordinates.y);
+    }
+    this.enemies.forEach(enemy => {
+      const potentialEnemyCoordinates = enemy.tankWantsToMove(deltaTime);
+      if (potentialEnemyCoordinates && this.canTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y, this.map, enemy)) {
+        enemy.doTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y);
+      }
+    });
 
     this.bonuses = this.bonuses.filter((bonus) => {
       // if has collision with the tank do bonus and return false
       const res = bonus.hasCollision(tank1Coordinates);
-      // console.log("res", res)
       if (res) {
         switch (bonus.getType()) {
           case "STAR":

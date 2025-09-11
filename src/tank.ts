@@ -39,6 +39,13 @@ export class Tank {
     this.helmetModeTimer = 3000;
   }
 
+  getPosition() {
+    return {
+      x: this.x,
+      y: this.y
+    }
+  }
+
   getLives() {
     return clamp(this.lives, 0, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   }
@@ -125,7 +132,7 @@ export class Tank {
     return this.tankVelosity;
   }
 
-  move(deltaTime: number, map: Map): { x: number, y: number } {
+  tankWantsToMove(deltaTime: number): { x: number, y: number } {
     if (!this.isMovingTank) return {
       x: this.x,
       y: this.y
@@ -141,32 +148,15 @@ export class Tank {
 
     const newX = clamp(this.x + distance * this.vectorMove[0], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
     const newY = clamp(this.y + distance * this.vectorMove[1], config.CELL_SIZE * 2, config.GRID_SIZE - this.size + config.CELL_SIZE * 2);
-
-    if (this.canMove(newX, newY, map)) {
-      this.x = newX;
-      this.y = newY;
-    }
-
     return {
-      x: this.x,
-      y: this.y
+      x: newX,
+      y: newY
     }
   }
 
-  canMove(newX: number, newY: number, map: Map) {
-    // change to the Hit Box getter
-    const corners = [
-      [newX, newY],
-      [newX + this.size - 1, newY],
-      [newX, newY + this.size - 1],
-      [newX + this.size - 1, newY + this.size - 1],
-    ];
-
-    for (const [x, y] of corners) {
-      if (!map.isWalkable(x, y)) return false;
-    }
-
-    return true;
+  doTankMove(newX: number, newY: number) {
+    this.x = newX;
+    this.y = newY;
   }
 
   setDirection(vector: [MoveVector, MoveVector]) {
