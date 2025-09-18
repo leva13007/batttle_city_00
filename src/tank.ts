@@ -1,5 +1,6 @@
 import { clamp } from "gamekit-utils";
-import { config, type BulletType, type Direction, Map, type MoveVector, Bullet } from "./main";
+import { config, type BulletType, type Direction, Map, type MoveVector } from "./main";
+import { Bullet } from "./bullet";
 
 export type SpriteAnimationFrameIdex = 0 | 1;
 export type TankLevel = 0 | 1 | 2 | 3;

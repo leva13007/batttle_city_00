@@ -1,3 +1,4 @@
+import type { Bullet } from './bullet';
 import { getMap } from './maps';
 import './style.css';
 import { Tank } from './tank';
@@ -216,16 +217,14 @@ type HostDefender = 0;
 type BelongsTo = number;
 
 // [sx_on_Sprite,sy_on_Sprite, x_display_correction, y_display_correction]
-const bulletWithDirection = {
+export const bulletWithDirection = {
   0: [0, 0,], // UP
   1: [0, 32,], // DOWN
   2: [0, 48,], // LEFT
   3: [0, 16,], // RIGHT
 }
 
-const tileBulletPossition = {
-  0: [22, 0], // Standart bullet
-}
+
 
 type ExplosionFrames = 0 | 1 | 2;
 
@@ -400,177 +399,6 @@ class Bonus {
     return this.type;
   }
 }
-
-
-
-export class Bullet {
-  private bulletVelosity = .3; //px per Msecond
-  private x = 0;
-  private y = 0;
-  private direction: Direction; // [dX, dY]
-  private belongTo: BelongsTo;
-  private bulletType: BulletType;
-
-  private size = config.CELL_SIZE * 2;
-  private bulletDirrectionMap: Record<string, number> = {
-    "0,-1": 0, // up
-    "-1,0": 2, // left
-    "0,1": 1, // down
-    "1,0": 3, // right
-  }
-
-  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo, bulletType: BulletType = 0) {
-    this.x = x;
-    this.y = y;
-    this.direction = direction;
-    this.belongTo = belongTo;
-    this.bulletType = bulletType;
-    this.bulletVelosity += bulletType * 0.45
-  }
-
-  getBelongsTo() {
-    return this.belongTo;
-  }
-
-  getCoordinates() {
-    return { x: this.x, y: this.y }
-  }
-
-  getHitbox() {
-    return [this.size, this.size]; // [width, height]
-  }
-
-  getStringDirecrtion() {
-    return this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] as keyof typeof bulletWithDirection;
-  }
-
-  directonToString() {
-    return `${this.direction[0]},${this.direction[1]}`
-  }
-
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    const indOfDir = this.getStringDirecrtion();
-    const aa = bulletWithDirection[indOfDir];
-    ctx!.drawImage(
-      img,
-      tileBulletPossition[0][0] * config.SPRITE_FRAME_SIZE + aa[0], tileBulletPossition[0][1] * config.SPRITE_FRAME_SIZE + aa[1],
-      config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
-      this.x, this.y,
-      this.size, this.size// CONST
-    );
-
-    if (config.debug) {
-      const hitBox = this.getHitbox();
-      ctx.strokeStyle = "green";
-      ctx.strokeRect(this.x, this.y, hitBox[0], hitBox[1]);
-    }
-  }
-
-  // get the other bullets and all tanks
-  move(deltaTime: number, map: Map): {
-    explode: boolean;
-    point: { x: number; y: number } | null
-  } {
-    const distance = this.bulletVelosity * deltaTime;
-
-    const newX = this.x + distance * this.direction[0];
-    const newY = this.y + distance * this.direction[1];
-
-    this.x = newX;
-    this.y = newY;
-
-    // check collision and if got it - explode & return data
-
-    // check if it outs of the Grid
-    const hitBox = this.getHitbox();
-    if (
-      this.x < config.CELL_SIZE * 2 ||
-      this.y < config.CELL_SIZE * 2 ||
-      this.x + hitBox[0] > config.GRID_SIZE + config.CELL_SIZE * 2 ||
-      this.y + hitBox[1] > config.GRID_SIZE + config.CELL_SIZE * 2
-    ) {
-      return {
-        explode: true,
-        point: {
-          x: newX,
-          y: newY
-        },
-      };
-    }
-
-    // check if it got collision with the Map element
-    {
-      const corners = [
-        [newX, newY],                                   // LEFT-TOP
-        [newX + hitBox[0] / 2, newY],                   // RIGHT-TOP
-        [newX, newY + hitBox[1] / 2],                  // LEFT-BOTTOM
-        [newX + hitBox[0] / 2, newY + hitBox[1] / 2], // RIGHT-BOTTOM
-      ];
-
-      for (const [x, y] of corners) {
-        if (!map.isFlyable(x, y)) return {
-          explode: true,
-          point: {
-            x: newX,
-            y: newY
-          },
-        };
-      }
-    }
-
-
-    return {
-      explode: false,
-      point: null,
-    };
-  }
-
-  getHitboxCoordinates() {
-    return [
-      [this.x, this.y], // left-top
-      [this.x + this.size / 2, this.y], // right-top
-      [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-      [this.x, this.y + this.size / 2], // left-bottom
-    ]
-  }
-
-  getFrontCorners() {
-    const dir = this.directonToString();
-
-    switch (dir) {
-      case "0,-1": // up
-        return [
-          [this.x, this.y], // left-top
-          [this.x + this.size / 2, this.y], // right-top
-        ];
-      case "-1,0": // left
-        return [
-          [this.x, this.y], // left-top
-          [this.x, this.y + this.size / 2], // left-bottom
-        ];
-      case "0,1": // down
-        return [
-          [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-          [this.x, this.y + this.size / 2], // left-bottom
-        ];
-      case "1,0": // right
-        return [
-          [this.x + this.size / 2, this.y], // right-top
-          [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-        ];
-    }
-  }
-
-  getDirection() {
-    return this.direction;
-  }
-
-  getBulletType() {
-    return this.bulletType;
-  }
-}
-
-
 
 class AssetLoader {
   static async loadSprite(src: string): Promise<HTMLImageElement> {
@@ -752,6 +580,47 @@ class Game {
     }
   }
 
+  canBulletMove(bullet: Bullet, map: Map) {
+    const hitBox = bullet.getHitbox();
+    const {x, y} = bullet.getCoordinates();
+    if (
+      x < config.CELL_SIZE * 2 ||
+      y < config.CELL_SIZE * 2 ||
+      x + hitBox[0] > config.GRID_SIZE + config.CELL_SIZE * 2 ||
+      y + hitBox[1] > config.GRID_SIZE + config.CELL_SIZE * 2
+    ) {
+      return false;
+    }
+
+    // check if it got collision with the Map element
+    {
+      const corners = [
+        [x, y],                                   // LEFT-TOP
+        [x + hitBox[0] / 2, y],                   // RIGHT-TOP
+        [x, y + hitBox[1] / 2],                  // LEFT-BOTTOM
+        [x + hitBox[0] / 2, y + hitBox[1] / 2], // RIGHT-BOTTOM
+      ];
+
+      for (const [x, y] of corners) {
+        if (!map.isFlyable(x, y)) return false;
+      }
+    }
+
+    // check collision with other Tanks
+    for (const enemy of [ ...this.enemies]) {
+      
+      const { x: xE, y: yE } = enemy.getPosition();
+      if (
+        x < xE + this.size &&
+        x + this.size > xE &&
+        y < yE + this.size &&
+        y + this.size > yE
+      ) return false;
+    }
+
+    return true;
+  }
+
   // Method for Player 1
   private size = config.CELL_SIZE * 2;
   canTankMove(newX: number, newY: number, map: Map, tank: Tank) {
@@ -861,9 +730,28 @@ class Game {
     }
 
     // loop through all bullets to move it
+    // const bulletsStatuses = this.bullets.map((bullet, i) => {
+    //   return bullet.move(deltaTime, this.map);
+    // });
+
     const bulletsStatuses = this.bullets.map((bullet, i) => {
-      return bullet.move(deltaTime, this.map);
+      // return bullet.move(deltaTime, this.map);
+      
+      if (!this.canBulletMove(bullet.wantsToMove(deltaTime), this.map)) {
+        const {x, y} = bullet.getCoordinates();
+        return {
+          explode: true,
+          point: {
+            x,
+            y
+          }
+        }
+      }
+      return {
+        explode: null,
+      };
     });
+
 
     this.bullets = this.bullets.filter((bullet, i) => {
       // if the bullet is exploded then create an Explosion

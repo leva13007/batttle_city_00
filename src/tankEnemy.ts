@@ -1,6 +1,6 @@
 import { Tank, type TankLevel } from "./tank";
 import { clamp } from "gamekit-utils";
-import { config, type BulletType, type Direction, Map, type MoveVector, Bullet } from "./main";
+import { config, type BulletType, type Direction, Map, type MoveVector } from "./main";
 
 export class TankEnemy extends Tank {
   protected isMovingTank = true;
@@ -39,7 +39,7 @@ export class TankEnemy extends Tank {
     if (this.enemySingleDirectionMoveTimer > 0) {
       this.enemySingleDirectionMoveTimer -= deltaTime;
     } else {
-      this.vectorMove = this.getRandomDirection();
+      this.setDirection(this.getRandomDirection());
       this.enemySingleDirectionMoveTimer = 1000 + Math.random() * 2000;
     }
   }
