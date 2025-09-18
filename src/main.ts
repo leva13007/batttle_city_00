@@ -615,7 +615,13 @@ class Game {
         x + this.size > xE &&
         y < yE + this.size &&
         y + this.size > yE
-      ) return false;
+      ) {
+        // set for this tank status DIE
+        // 
+        this.explosions.push(new Explosion(xE, yE));
+        this.enemies = this.enemies.filter(eT => eT.getID() !== enemy.getID())
+        return false;
+      }
     }
 
     return true;

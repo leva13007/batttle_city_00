@@ -40,6 +40,10 @@ export class Tank {
     this.helmetModeTimer = 3000;
   }
 
+  getID() {
+    return this.ID;
+  }
+
   getPosition() {
     return {
       x: this.x,
