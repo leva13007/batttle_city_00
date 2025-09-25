@@ -1,10 +1,19 @@
-import { bulletWithDirection, config, type BulletType, type Direction, type Map } from "./main";
+import { bulletWithDirection, config } from './config';
+import { Map } from './map';
+import type { BulletType, Direction } from './types';
 
 type BelongsTo = number;
 
 const tileBulletPossition = {
   0: [22, 0], // Standart bullet
 }
+
+export const TEAMS = {
+  DEFENDER: 'defender',
+  ENEMY: 'enemy',
+} as const;
+
+export type Teams = typeof TEAMS[keyof typeof TEAMS];
 
 export class Bullet {
   private bulletVelosity = .3; //px per Msecond
@@ -13,8 +22,7 @@ export class Bullet {
   private direction: Direction; // [dX, dY]
   private belongTo: BelongsTo;
   private bulletType: BulletType;
-
-  private isExploded: boolean = false;
+  private belongToTeam: Teams;
 
   private size = config.CELL_SIZE * 2;
   private bulletDirrectionMap: Record<string, number> = {
@@ -24,13 +32,18 @@ export class Bullet {
     "1,0": 3, // right
   }
 
-  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo, bulletType: BulletType = 0) {
+  constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo, bulletType: BulletType = 0, belongToTeam: Teams) {
     this.x = x;
     this.y = y;
     this.direction = direction;
     this.belongTo = belongTo;
     this.bulletType = bulletType;
     this.bulletVelosity += bulletType * 0.45
+    this.belongToTeam = belongToTeam;
+  }
+
+  getTeam() {
+    return this.belongToTeam;
   }
 
   getBelongsTo() {

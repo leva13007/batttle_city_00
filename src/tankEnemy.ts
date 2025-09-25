@@ -1,6 +1,7 @@
+import { config } from './config';
 import { Tank, type TankLevel } from "./tank";
-import { clamp } from "gamekit-utils";
-import { config, type BulletType, type Direction, Map, type MoveVector } from "./main";
+import type { Teams } from "./bullet";
+import type { Direction } from './types';
 
 export class TankEnemy extends Tank {
   protected isMovingTank = true;
@@ -15,8 +16,8 @@ export class TankEnemy extends Tank {
 
   private enemySingleDirectionMoveTimer: number = 100;
 
-  constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1]) {
-    super(tankID, level, x, y, vector);
+  constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1], team: Teams) {
+    super(tankID, level, x, y, vector, team);
     // this.ID = tankID;
     // this.level = level;
     // this.x = x;

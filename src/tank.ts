@@ -1,6 +1,7 @@
+import { config } from './config';
 import { clamp } from "gamekit-utils";
-import { config, type BulletType, type Direction, Map, type MoveVector } from "./main";
-import { Bullet } from "./bullet";
+import { Bullet, type Teams } from "./bullet";
+import type { BulletType, Direction, MoveVector } from './types';
 
 export type SpriteAnimationFrameIdex = 0 | 1;
 export type TankLevel = 0 | 1 | 2 | 3;
@@ -30,7 +31,9 @@ export class Tank {
   private helmetModeTimer: number = 0;
   private helmetSpriteIndex: number = 0;
 
-  constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1]) {
+  private team: Teams;
+
+  constructor(tankID: number, level: TankLevel = 0, x: number = 0, y: number = 0, vector: Direction = [0, 1], team: Teams) {
     this.ID = tankID;
     this.level = level;
     this.x = x;
@@ -38,6 +41,11 @@ export class Tank {
     this.vectorMove = vector;
     this.isHelmetMode = true;
     this.helmetModeTimer = 3000;
+    this.team = team;
+  }
+
+  getTeam() {
+    return this.team;
   }
 
   getID() {
@@ -211,7 +219,7 @@ export class Tank {
         break;
     }
 
-    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, this.bulletType); // 
+    const newBullet = new Bullet(x, y, this.vectorMove, this.ID, this.bulletType, this.team); // 
     bullets.push(newBullet);
   }
 }

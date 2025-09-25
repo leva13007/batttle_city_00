@@ -1,517 +1,17 @@
-import type { Bullet } from './bullet';
+import { config, matchNumbers, tankDirections } from './config';
+import { TEAMS, type Bullet } from './bullet';
 import { getMap } from './maps';
 import './style.css';
 import { Tank } from './tank';
 import { TankEnemy } from './tankEnemy';
 
-
-export type MoveVector = -1 | 0 | 1;
-export type Direction = [MoveVector, MoveVector];
-
-export type BulletType = 0 | 1 | 2;
-
-
-export const config = {
-  CELL_COUNT: 13 * 2,
-  CELL_SIZE: 30,
-  SPRITE_FRAME_SIZE: 16,
-  SPRITE_FRAME_SIZE_HALF: 8,
-  get GRID_SIZE() {
-    return this.CELL_COUNT * this.CELL_SIZE
-  },
-  get CELL_HALF_SIZE() {
-    return this.CELL_SIZE / 2
-  },
-  SPRITE_MOVING_ANIMATION_INTERVAL: 80, // move to the Tank class
-  debug: true,
-}
-
-export const tankDirections: Record<string, Direction> = {
-  UP: [0, -1],
-  DOWN: [0, 1],
-  LEFT: [-1, 0],
-  RIGHT: [1, 0],
-}
-
-const directionMap: Record<string, Direction> = {
-  ArrowUp: tankDirections.UP,
-  ArrowDown: tankDirections.DOWN,
-  ArrowLeft: tankDirections.LEFT,
-  ArrowRight: tankDirections.RIGHT,
-}
-
-const keyMap: Record<string, any> = {
-  Space: "makeFire",
-}
-
-const tileTypes = {
-  EMPTY: 0,
-  BRICK: 1,
-  STONE: 2,
-  WATER: 3,
-  BUSH: 4,
-  ICE: 5,
-
-  BRICK_RIGHT: 6,
-  BRICK_DOWN: 7,
-  BRICK_LEFT: 8,
-  BRICK_TOP: 9,
-
-  BASE_LT: 10, // Base Left Top
-  BASE_RT: 11, // Base Right Top
-  BASE_LB: 12, // Base Left Bottom
-  BASE_RB: 13, // Base Right Bottom
-
-  BASE_D_LT: 14,
-  BASE_D_RT: 15,
-  BASE_D_LB: 16,
-  BASE_D_RB: 17,
-} as const;
-
-const tileSpritePosition = {
-  0: [0, 0],
-  1: [16, 4],
-  2: [16, 4.5],
-  3: [16, 5],
-  4: [16.5, 4.5],
-  5: [17, 4.5],
-
-  6: [16.5, 4],
-  7: [17, 4],
-  8: [17.5, 4],
-  9: [18, 4],
-
-  10: [19, 2],
-  11: [19.5, 2],
-  12: [19, 2.5],
-  13: [19.5, 2.5],
-
-  14: [20, 2],
-  15: [20.5, 2],
-  16: [20, 2.5],
-  17: [20.5, 2.5],
-} as const;
-
-export type TileType = typeof tileTypes[keyof typeof tileTypes]
-
-export class Map {
-  private map: TileType[][];
-
-  constructor(map: TileType[][]) {
-    this.map = map;
-  }
-
-  get length() {
-    return this.map.length;
-  }
-
-  getMapArray() {
-    return this.map;
-  }
-
-  drawBottomLayer(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    for (let r = 0; r < this.map.length; r++) {
-      for (let c = 0; c < this.map[r].length; c++) {
-        const tile = this.map[r][c];
-        // skip if the tile is Bush
-        if (tile === tileTypes.BUSH) continue;
-        if (tile !== tileTypes.EMPTY) {
-          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2;
-          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2;
-          const [spriteX, spriteY] = tileSpritePosition[tile]
-          ctx!.drawImage(
-            img,
-            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE_HALF, config.SPRITE_FRAME_SIZE_HALF, // add tank level 2sd * level
-            gridX, gridY, config.CELL_SIZE, config.CELL_SIZE
-          );
-        }
-      }
-    }
-  }
-
-  drawTopLayer(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    for (let r = 0; r < this.map.length; r++) {
-      for (let c = 0; c < this.map[r].length; c++) {
-        const tile = this.map[r][c];
-        // skip if the tile is Bush
-        if (tile === tileTypes.BUSH) {
-          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2;
-          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2;
-          const [spriteX, spriteY] = tileSpritePosition[tile]
-          ctx!.drawImage(
-            img,
-            spriteX * config.SPRITE_FRAME_SIZE, spriteY * config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE_HALF, config.SPRITE_FRAME_SIZE_HALF, // add tank level 2sd * level
-            gridX, gridY, config.CELL_SIZE, config.CELL_SIZE
-          );
-        }
-      }
-    }
-  }
-
-  isWalkable(x: number, y: number): boolean {
-    const c = Math.floor(x / config.CELL_SIZE) - 2;
-    const r = Math.floor(y / config.CELL_SIZE) - 2;
-    const tile = this.map?.[r]?.[c];
-    if (!tile) return true;
-    console.log({
-      r, c
-    })
-    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE] as TileType[]).includes(tile)
-  }
-
-  isFlyable(x: number, y: number): boolean {
-    const c = Math.floor(x / config.CELL_SIZE) - 2;
-    const r = Math.floor(y / config.CELL_SIZE) - 2;
-    const tile = this.map?.[r]?.[c];
-    if (!tile) return true;
-    console.log({
-      r, c
-    })
-    return ([tileTypes.EMPTY, tileTypes.BUSH, tileTypes.ICE, tileTypes.WATER] as TileType[]).includes(tile)
-  }
-
-  doCollision(bullet: Bullet) {
-    const corners = bullet.getFrontCorners(); // 
-    const bulletType = bullet.getBulletType();
-
-    if (!corners) return;
-    for (const corner of corners) {
-      const [x, y] = corner;
-      const c = Math.floor(x / config.CELL_SIZE) - 2;
-      const r = Math.floor(y / config.CELL_SIZE) - 2;
-      const tile = this.map?.[r]?.[c];
-
-      if (tile) {
-        if (bulletType === 0 || bulletType === 1) {
-          if (([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
-            this.map[r][c] = 0;
-          } else if (tileTypes.BRICK === tile) {
-            const dir = bullet.directonToString();
-
-            switch (dir) {
-              case "0,-1": // up
-                this.map[r][c] = 9; // BRICK_TOP: 9,
-                break;
-              case "-1,0": // left
-                this.map[r][c] = 8; // BRICK_LEFT: 8,
-                break;
-              case "0,1": // down
-                this.map[r][c] = 7; // BRICK_DOWN: 7,
-                break;
-              case "1,0": // right
-                this.map[r][c] = 6; // BRICK_RIGHT: 6,
-                break;
-            }
-          }
-        } else if (bulletType === 2 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
-          this.map[r][c] = 0;
-        }
-      }
-    }
-  }
-}
-
-type HostEnemy = 1;
-type HostDefender = 0;
-
-type BelongsTo = number;
-
-// [sx_on_Sprite,sy_on_Sprite, x_display_correction, y_display_correction]
-export const bulletWithDirection = {
-  0: [0, 0,], // UP
-  1: [0, 32,], // DOWN
-  2: [0, 48,], // LEFT
-  3: [0, 16,], // RIGHT
-}
-
-
-
-type ExplosionFrames = 0 | 1 | 2;
-
-
-const x1 = 12 * config.CELL_SIZE + config.CELL_SIZE * 2;
-const y1 = 24 * config.CELL_SIZE + config.CELL_SIZE * 2;
-
-const x2 = 11 * config.CELL_SIZE + config.CELL_SIZE * 2;
-const y2 = 23 * config.CELL_SIZE + config.CELL_SIZE * 2;
-
-const s1 = config.CELL_SIZE * 2;
-const s2 = config.CELL_SIZE * 4;
-
-const d1 = config.SPRITE_FRAME_SIZE;
-const d2 = config.SPRITE_FRAME_SIZE * 2;
-
-const base = {
-  x: x1,
-  y: y1,
-  size: s1
-}
-
-class ExplosionBase {
-  private x = [x1, x1, x1, x2, x2, x2, x1, x1, x1];
-  private y = [y1, y1, y1, y2, y2, y2, y1, y1, y1];
-  private frameCount = 9; // todo 9
-  private frame: ExplosionFrames = 0;
-  private duration = 900; // todo 300
-  private frameInterval = this.duration / this.frameCount;
-  private size = [s1, s1, s1, s2, s2, s2, s1, s1, s1];
-  private isDone = false;
-  private timer = 0;
-  private explosionSpriteX = [16, 17, 18, 19, 21, 19, 18, 17, 16];
-  private d = [d1, d1, d1, d2, d2, d2, d1, d1, d1];
-
-  constructor() { }
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    ctx!.drawImage(
-      img,
-      (this.explosionSpriteX[this.frame]) * config.SPRITE_FRAME_SIZE, 8 * config.SPRITE_FRAME_SIZE,
-      this.d[this.frame], this.d[this.frame], // CONST
-      this.x[this.frame], this.y[this.frame],
-      this.size[this.frame], this.size[this.frame] // CONST
-    );
-
-    if (config.debug) { }
-  }
-  update(deltaTime: number) {
-    this.timer += deltaTime;
-
-    if (this.timer > this.duration) {
-      this.isDone = true;
-    } else {
-      this.frame = Math.floor(this.timer / this.frameInterval) as ExplosionFrames
-    }
-  }
-
-  isFinished() {
-    return this.isDone;
-  }
-}
-
-class Explosion {
-  private x = 0;
-  private y = 0;
-  private frameCount = 3;
-  private frame: ExplosionFrames = 0;
-  private duration = 300;
-  private frameInterval = this.duration / this.frameCount;
-  private size = config.CELL_SIZE * 2;
-  private isDone = false;
-  private timer = 0;
-  private explosionSpriteX = 21;
-
-  constructor(x: number, y: number) {
-    this.x = x;
-    this.y = y;
-  }
-
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-
-    ctx!.drawImage(
-      img,
-      this.explosionSpriteX * config.SPRITE_FRAME_SIZE, this.frame * config.SPRITE_FRAME_SIZE,
-      config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
-      this.x, this.y,
-      this.size, this.size // CONST
-    );
-
-    if (config.debug) { }
-  }
-
-  update(deltaTime: number) {
-    this.timer += deltaTime;
-
-    if (this.timer > this.duration) {
-      this.isDone = true;
-    } else {
-      this.frame = Math.floor(this.timer / this.frameInterval) as ExplosionFrames
-    }
-  }
-
-  isFinished() {
-    return this.isDone;
-  }
-}
-
-// type BounusType = "GUN" | "TANK" | "STAR" | "BOMB" | "SHOVEL" | "TIME" | "HELMET"
-
-// const tileBonusPossition = {
-//   0: [16, 7], // "HELMET"
-//   1: [16, 8], // "TIME"
-//   2: [16, 9], // "SHOVEL"
-//   3: [16, 10], // "STAR"
-//   4: [16, 11], // "BOMB"
-//   5: [16, 12], // "TANK"
-//   6: [16, 13], // "GUN"
-// }
-
-const tileBonusPossition = {
-  HELMET: [16, 7], // "HELMET"
-  TIME: [17, 7], // "TIME"
-  SHOVEL: [18, 7], // "SHOVEL"
-  STAR: [19, 7], // "STAR"
-  BOMB: [20, 7], // "BOMB"
-  TANK: [21, 7], // "TANK"
-  GUN: [22, 7], // "GUN"
-}
-
-type BounusType = keyof typeof tileBonusPossition;
-
-class Bonus {
-  private type: BounusType;
-  private x = 0;
-  private y = 0;
-  private size = config.CELL_SIZE * 2;
-
-  constructor(type: BounusType, x: number, y: number) {
-    this.type = type;
-    this.x = x;
-    this.y = y;
-  }
-
-  applyBonus(cb: () => void) {
-    cb();
-  }
-
-  draw(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
-    const { 0: x, 1: y } = tileBonusPossition[this.type]
-    ctx!.drawImage(
-      img,
-      x * config.SPRITE_FRAME_SIZE, y * config.SPRITE_FRAME_SIZE,
-      config.SPRITE_FRAME_SIZE, config.SPRITE_FRAME_SIZE, // CONST
-      this.x, this.y,
-      this.size, this.size// CONST
-    );
-  }
-
-  hasCollision(coor: { x: number, y: number } | null) {
-    if (!coor) return false;
-    const { x, y } = coor;
-    if (
-      this.x < x + this.size &&
-      this.x + this.size > x &&
-      this.y < y + this.size &&
-      this.y + this.size > y
-    ) return true;
-    return false;
-  }
-
-  getType() {
-    return this.type;
-  }
-}
-
-class AssetLoader {
-  static async loadSprite(src: string): Promise<HTMLImageElement> {
-    return new Promise((res, rej) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => res(img);
-      img.onerror = () => rej(new Error('Failed to load image'));
-    });
-  }
-}
-
-class Renderer {
-  private ctx!: CanvasRenderingContext2D;
-
-  constructor() {
-    this.setup();
-  }
-
-  gridSize() {
-    return config.CELL_COUNT * config.CELL_SIZE;
-  }
-
-  getWidth() {
-    return this.gridSize() + config.CELL_SIZE * 6;
-  }
-
-  getHeight() {
-    return this.gridSize() + config.CELL_SIZE * 4;
-  }
-
-  setup() {
-    document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-      <canvas id="canvas" ></canvas>
-    `;
-
-    const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-
-    canvas.width = this.getWidth();
-    canvas.height = this.getHeight();
-
-    this.ctx = canvas!.getContext("2d") as CanvasRenderingContext2D; // TODO fix it
-  }
-
-  clear() {
-    this.ctx!.clearRect(0, 0, this.getWidth(), this.getHeight());
-  }
-
-  getContext() {
-    return this.ctx;
-  }
-}
-
-class InputManager {
-  private changeDirection?: (direction: Direction) => void;
-  private toggleMovment?: (movement: boolean) => void;
-  private makeFire?: () => void;
-
-  constructor() {
-    this.setupEventListeners();
-  }
-
-  setChangeDirectionCb(cb: (direction: Direction) => void) {
-    this.changeDirection = cb;
-  }
-
-  setToggleMovmentCb(cb: (movement: boolean) => void) {
-    this.toggleMovment = cb;
-  }
-
-  setMakeFire(cb: () => void) {
-    this.makeFire = cb;
-  }
-
-  private setupEventListeners() {
-    window.addEventListener('keydown', this.handleKeyDown.bind(this));
-    window.addEventListener('keyup', this.handleKeyUp.bind(this));
-  }
-
-  private handleKeyDown(e: KeyboardEvent) {
-    const direction = directionMap[e.key];
-
-    // if player press movement button
-    if (direction) {
-      this.changeDirection?.(direction);
-      this.toggleMovment?.(true);
-    }
-
-    const keyEvent = keyMap[e.code];
-
-    if (keyEvent) {
-      if (keyEvent === "makeFire") {
-        this.makeFire?.()
-      }
-    }
-  }
-  private handleKeyUp() {
-    this.toggleMovment?.(false);
-  }
-}
-
-const matchNumbers = {
-  0: [20.5, 11.5],
-  1: [21, 11.5],
-  2: [21.5, 11.5],
-  3: [22, 11.5],
-  4: [22.5, 11.5],
-  5: [20.5, 12],
-  6: [21, 12],
-  7: [21.5, 12],
-  8: [22, 12],
-  9: [22.5, 12],
-}
+import { Map } from './map';
+import { AssetLoader } from './assetLoader';
+import { InputManager } from './inputManager';
+import { Explosion } from './explosion';
+import { Renderer } from './renderer';
+import { Bonus } from './bonus';
+import { base, ExplosionBase } from './explosionBase';
 
 class Game {
 
@@ -544,7 +44,7 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 1, (8 + 2 - 6) * config.CELL_SIZE, (24 + 2 - 22) * config.CELL_SIZE, tankDirections.UP);
+    this.player1 = new Tank(0, 1, (8 + 2 - 6) * config.CELL_SIZE, (24 + 2 - 22) * config.CELL_SIZE, tankDirections.UP, TEAMS.DEFENDER);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
@@ -559,9 +59,9 @@ class Game {
     this.bonuses.push(new Bonus("HELMET", 270, 670));
 
     this.enemies = [
-      new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT),
-      new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1]),
-      new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT),
+      new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT, TEAMS.ENEMY),
+      new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1], TEAMS.ENEMY),
+      new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT, TEAMS.ENEMY),
     ];
   }
 
@@ -582,7 +82,7 @@ class Game {
 
   canBulletMove(bullet: Bullet, map: Map) {
     const hitBox = bullet.getHitbox();
-    const {x, y} = bullet.getCoordinates();
+    const { x, y } = bullet.getCoordinates();
     if (
       x < config.CELL_SIZE * 2 ||
       y < config.CELL_SIZE * 2 ||
@@ -606,9 +106,20 @@ class Game {
       }
     }
 
-    // check collision with other Tanks
-    for (const enemy of [ ...this.enemies]) {
-      
+    // check collision with other Tanks -> 1. remove from list the owner of the bullet 2. loop through all tanks and check collision
+    const list = [...this.enemies, this.player1]
+      .filter(eT => eT.getID() !== bullet.getBelongsTo())
+      .filter(t => {
+        if (
+          (bullet.getTeam() === TEAMS.ENEMY && t.getTeam() === TEAMS.DEFENDER)
+          || (bullet.getTeam() === TEAMS.DEFENDER && t.getTeam() === TEAMS.ENEMY)) {
+          return true;
+        }
+        return false;
+        //t.getTeam() === TEAMS.DEFENDER
+      });
+    for (const enemy of list) {
+
       const { x: xE, y: yE } = enemy.getPosition();
       if (
         x < xE + this.size &&
@@ -642,7 +153,7 @@ class Game {
       if (!map.isWalkable(x, y)) return false;
     }
     // check collision with other Tanks
-    for (const enemy of [ ...this.enemies, this.player1]) {
+    for (const enemy of [...this.enemies, this.player1]) {
       if (enemy === tank) continue;
       const { x, y } = enemy.getPosition();
       if (
@@ -667,6 +178,9 @@ class Game {
       this.player1.doTankMove(potentialTank1Coordinates.x, potentialTank1Coordinates.y);
     }
     this.enemies.forEach(enemy => {
+
+      enemy.fire(this.bullets);
+
       const potentialEnemyCoordinates = enemy.tankWantsToMove(deltaTime);
       if (potentialEnemyCoordinates && this.canTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y, this.map, enemy)) {
         enemy.doTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y);
@@ -699,7 +213,7 @@ class Game {
             break;
           case "TIME":
             break;
-          
+
         }
       }
 
@@ -742,9 +256,9 @@ class Game {
 
     const bulletsStatuses = this.bullets.map((bullet, i) => {
       // return bullet.move(deltaTime, this.map);
-      
+
       if (!this.canBulletMove(bullet.wantsToMove(deltaTime), this.map)) {
-        const {x, y} = bullet.getCoordinates();
+        const { x, y } = bullet.getCoordinates();
         return {
           explode: true,
           point: {
@@ -804,6 +318,7 @@ class Game {
   }
 
   render() {
+    console.log('render', this.bullets)
     this.renderer.clear();
 
     this.renderer.getContext()!.fillStyle = "#636363";
