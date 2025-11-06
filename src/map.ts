@@ -25,8 +25,8 @@ export class Map {
         // skip if the tile is Bush
         if (tile === tileTypes.BUSH) continue;
         if (tile !== tileTypes.EMPTY) {
-          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2;
-          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2;
+          const gridX = c * config.CELL_SIZE + config.CELL_SIZE * 2; // 2 - offset for map border
+          const gridY = r * config.CELL_SIZE + config.CELL_SIZE * 2; // 2 - offset for map border
           const [spriteX, spriteY] = tileSpritePosition[tile]
           ctx!.drawImage(
             img,
@@ -80,42 +80,127 @@ export class Map {
   }
 
   doCollision(bullet: Bullet) {
-    const corners = bullet.getFrontCorners(); // 
+    const corners = bullet.getFrontCorners(); // return two Pints in front of the bullet
     const bulletType = bullet.getBulletType();
 
     if (!corners) return;
-    for (const corner of corners) {
-      const [x, y] = corner;
-      const c = Math.floor(x / config.CELL_SIZE) - 2;
-      const r = Math.floor(y / config.CELL_SIZE) - 2;
-      const tile = this.map?.[r]?.[c];
 
-      if (tile) {
-        if (bulletType === 0 || bulletType === 1) {
-          if (([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
-            this.map[r][c] = 0;
-          } else if (tileTypes.BRICK === tile) {
-            const dir = bullet.directonToString();
+    const tile1 = this.getTileByCoordinates(corners[0] as [number, number]);
+    const tile2 = this.getTileByCoordinates(corners[1] as [number, number]);
+    if (bulletType === 0 || bulletType === 1) {
 
-            switch (dir) {
-              case "0,-1": // up
-                this.map[r][c] = 9; // BRICK_TOP: 9,
-                break;
-              case "-1,0": // left
-                this.map[r][c] = 8; // BRICK_LEFT: 8,
-                break;
-              case "0,1": // down
-                this.map[r][c] = 7; // BRICK_DOWN: 7,
-                break;
-              case "1,0": // right
-                this.map[r][c] = 6; // BRICK_RIGHT: 6,
-                break;
-            }
-          }
-        } else if (bulletType === 2 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile)) {
+      if (tile1 && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile1.tile) && tile2 && tile2.tile === tileTypes.BRICK) {
+        const dir = bullet.directionToString();
+        const { r, c } = tile2;
+        switch (dir) {
+          case "0,-1": // up
+            this.map[r][c] = 9; // BRICK_TOP: 9,
+            break;
+          case "-1,0": // left
+            this.map[r][c] = 8; // BRICK_LEFT: 8,
+            break;
+          case "0,1": // down
+            this.map[r][c] = 7; // BRICK_DOWN: 7,
+            break;
+          case "1,0": // right
+            this.map[r][c] = 6; // BRICK_RIGHT: 6,
+            break;
+        }
+      } else if (tile2 && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile2.tile) && tile1 && tile1.tile === tileTypes.BRICK) {
+        const dir = bullet.directionToString();
+        const { r, c } = tile1;
+        switch (dir) {
+          case "0,-1": // up
+            this.map[r][c] = 9; // BRICK_TOP: 9,
+            break;
+          case "-1,0": // left
+            this.map[r][c] = 8; // BRICK_LEFT: 8,
+            break;
+          case "0,1": // down
+            this.map[r][c] = 7; // BRICK_DOWN: 7,
+            break;
+          case "1,0": // right
+            this.map[r][c] = 6; // BRICK_RIGHT: 6,
+            break;
+        }
+      } else if (tile1 && tile2 && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile2.tile) && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile1.tile)) {
+        {
+          const { r, c } = tile1;
           this.map[r][c] = 0;
         }
+        {
+          const { r, c } = tile2;
+          this.map[r][c] = 0;
+        }
+      } else if (tile1 && tile2 && tile1.tile === tileTypes.BRICK && tile2.tile === tileTypes.BRICK) {
+        {
+          const { r, c } = tile1;
+          this.map[r][c] = 0;
+        }
+        {
+          const { r, c } = tile2;
+          this.map[r][c] = 0;
+        }
+      } else if (tile1 && tile1.tile === tileTypes.BRICK) {
+        const dir = bullet.directionToString();
+        const { r, c } = tile1;
+        switch (dir) {
+          case "0,-1": // up
+            this.map[r][c] = 9; // BRICK_TOP: 9,
+            break;
+          case "-1,0": // left
+            this.map[r][c] = 8; // BRICK_LEFT: 8,
+            break;
+          case "0,1": // down
+            this.map[r][c] = 7; // BRICK_DOWN: 7,
+            break;
+          case "1,0": // right
+            this.map[r][c] = 6; // BRICK_RIGHT: 6,
+            break;
+        }
+      } else if (tile2 && tile2.tile === tileTypes.BRICK) {
+        const dir = bullet.directionToString();
+        const { r, c } = tile2;
+        switch (dir) {
+          case "0,-1": // up
+            this.map[r][c] = 9; // BRICK_TOP: 9,
+            break;
+          case "-1,0": // left
+            this.map[r][c] = 8; // BRICK_LEFT: 8,
+            break;
+          case "0,1": // down
+            this.map[r][c] = 7; // BRICK_DOWN: 7,
+            break;
+          case "1,0": // right
+            this.map[r][c] = 6; // BRICK_RIGHT: 6,
+            break;
+        }
+      } else if (tile1 && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile1.tile)) {
+        const { r, c } = tile1;
+        this.map[r][c] = 0;
+      } else if (tile2 && ([tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile2.tile)) {
+        const { r, c } = tile2;
+        this.map[r][c] = 0;
+      }
+    } else if (bulletType === 2) {
+      if (tile1 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile1.tile)) {
+        const { r, c } = tile1;
+        this.map[r][c] = 0;
+      }
+      if (tile2 && ([tileTypes.STONE, tileTypes.BRICK, tileTypes.BRICK_DOWN, tileTypes.BRICK_LEFT, tileTypes.BRICK_RIGHT, tileTypes.BRICK_TOP] as TileType[]).includes(tile2.tile)) {
+        const { r, c } = tile2;
+        this.map[r][c] = 0;
       }
     }
   }
+
+  getTileByCoordinates([x, y]: [number, number]): { tile: TileType, r: number, c: number } | null {
+    const c = Math.floor(x / config.CELL_SIZE) - 2;
+    const r = Math.floor(y / config.CELL_SIZE) - 2;
+    const tile = this.map?.[r]?.[c];
+    if (tile === undefined) return null;
+    return { tile, r, c };
+  }
 }
+
+

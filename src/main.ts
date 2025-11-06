@@ -44,7 +44,7 @@ class Game {
 
   constructor() {
     this.spriteImg = new Image();
-    this.player1 = new Tank(0, 1, (8 + 2 - 6) * config.CELL_SIZE, (24 + 2 - 22) * config.CELL_SIZE, tankDirections.UP, TEAMS.DEFENDER);
+    this.player1 = new Tank(0, 1, (8 + 2 - 0) * config.CELL_SIZE, (24 + 2 - 0) * config.CELL_SIZE, tankDirections.UP, TEAMS.DEFENDER);
     this.renderer = new Renderer();
     this.inputManager = new InputManager();
     this.setInputCbs();
@@ -59,9 +59,9 @@ class Game {
     this.bonuses.push(new Bonus("HELMET", 270, 670));
 
     this.enemies = [
-      new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT, TEAMS.ENEMY),
-      new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1], TEAMS.ENEMY),
-      new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT, TEAMS.ENEMY),
+      // new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT, TEAMS.ENEMY),
+      // new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1], TEAMS.ENEMY),
+      // new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT, TEAMS.ENEMY),
     ];
   }
 

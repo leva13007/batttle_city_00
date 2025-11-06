@@ -62,7 +62,7 @@ export class Bullet {
     return this.bulletDirrectionMap[`${this.direction[0]},${this.direction[1]}`] as keyof typeof bulletWithDirection;
   }
 
-  directonToString() {
+  directionToString() {
     return `${this.direction[0]},${this.direction[1]}`
   }
 
@@ -165,7 +165,7 @@ export class Bullet {
   }
 
   getFrontCorners() {
-    const dir = this.directonToString();
+    const dir = this.directionToString();
 
     switch (dir) {
       case "0,-1": // up
