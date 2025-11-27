@@ -2,7 +2,7 @@ import { bulletWithDirection, config } from './config';
 import { Map } from './map';
 import type { BulletType, Direction } from './types';
 
-type BelongsTo = number;
+type BelongsTo = number; // Tank ID
 
 const tileBulletPossition = {
   0: [22, 0], // Standart bullet
@@ -16,6 +16,7 @@ export const TEAMS = {
 export type Teams = typeof TEAMS[keyof typeof TEAMS];
 
 export class Bullet {
+  public ID: number;
   private bulletVelosity = .3; //px per Msecond
   private x = 0;
   private y = 0;
@@ -33,6 +34,7 @@ export class Bullet {
   }
 
   constructor(x: number, y: number, direction: Direction, belongTo: BelongsTo, bulletType: BulletType = 0, belongToTeam: Teams) {
+    this.ID = Math.floor(Math.random() * 1000000);
     this.x = x;
     this.y = y;
     this.direction = direction;

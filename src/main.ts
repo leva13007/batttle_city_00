@@ -59,9 +59,9 @@ class Game {
     this.bonuses.push(new Bonus("HELMET", 270, 670));
 
     this.enemies = [
-      // new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT, TEAMS.ENEMY),
+      new TankEnemy(1, 0, (0 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.RIGHT, TEAMS.ENEMY),
       // new TankEnemy(2, 0, (12 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, [0, 1], TEAMS.ENEMY),
-      // new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT, TEAMS.ENEMY),
+      new TankEnemy(3, 0, (24 + 2) * config.CELL_SIZE, (0 + 2) * config.CELL_SIZE, tankDirections.LEFT, TEAMS.ENEMY),
     ];
   }
 
@@ -103,6 +103,27 @@ class Game {
 
       for (const [x, y] of corners) {
         if (!map.isFlyable(x, y)) return false;
+      }
+    }
+
+    // check collision with other Bullets and if has collision then both bullets explode
+    for (const otherBullet of this.bullets) {
+      if (
+        otherBullet === bullet // same bullet
+        || otherBullet.getTeam() === bullet.getTeam() // same team
+      ) continue;
+      const { x: xB, y: yB } = otherBullet.getCoordinates();
+      const otherHitBox = otherBullet.getHitbox();
+      if (
+        x < xB + otherHitBox[0] &&
+        x + hitBox[0] > xB &&
+        y < yB + otherHitBox[1] &&
+        y + hitBox[1] > yB
+      ) {
+        // both bullets explode
+        this.explosions.push(new Explosion(xB, yB));
+        this.bullets = this.bullets.filter(b => b.ID !== otherBullet.ID && b.ID !== bullet.ID);
+        return false;
       }
     }
 
@@ -181,10 +202,11 @@ class Game {
 
       enemy.fire(this.bullets);
 
-      const potentialEnemyCoordinates = enemy.tankWantsToMove(deltaTime);
-      if (potentialEnemyCoordinates && this.canTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y, this.map, enemy)) {
-        enemy.doTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y);
-      }
+      // TODO: enable enemy movement
+      // const potentialEnemyCoordinates = enemy.tankWantsToMove(deltaTime);
+      // if (potentialEnemyCoordinates && this.canTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y, this.map, enemy)) {
+      //   enemy.doTankMove(potentialEnemyCoordinates.x, potentialEnemyCoordinates.y);
+      // }
     });
 
     this.bonuses = this.bonuses.filter((bonus) => {
@@ -318,7 +340,6 @@ class Game {
   }
 
   render() {
-    console.log('render', this.bullets)
     this.renderer.clear();
 
     this.renderer.getContext()!.fillStyle = "#636363";

@@ -40,7 +40,8 @@ export class TankEnemy extends Tank {
     if (this.enemySingleDirectionMoveTimer > 0) {
       this.enemySingleDirectionMoveTimer -= deltaTime;
     } else {
-      this.setDirection(this.getRandomDirection());
+      // TODO:remove it after debugging
+      // this.setDirection(this.getRandomDirection());
       this.enemySingleDirectionMoveTimer = 1000 + Math.random() * 2000;
     }
   }

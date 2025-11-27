@@ -1,3 +1,5 @@
+import type { Direction } from "./types"
+
 export const config = {
   CELL_COUNT: 13 * 2,
   CELL_SIZE: 30,
