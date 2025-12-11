@@ -157,15 +157,7 @@ export class Bullet {
     return this
   }
 
-  getHitboxCoordinates() {
-    return [
-      [this.x, this.y], // left-top
-      [this.x + this.size / 2, this.y], // right-top
-      [this.x + this.size / 2, this.y + this.size / 2], // right-bottom
-      [this.x, this.y + this.size / 2], // left-bottom
-    ]
-  }
-
+  //** Get the front point which depends on the direction of the bullet */
   getFrontCorners() {
     const dir = this.directionToString();
 

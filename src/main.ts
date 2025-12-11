@@ -106,6 +106,7 @@ class Game {
       }
     }
 
+
     // check collision with other Bullets and if has collision then both bullets explode
     for (const otherBullet of this.bullets) {
       if (
@@ -114,11 +115,12 @@ class Game {
       ) continue;
       const { x: xB, y: yB } = otherBullet.getCoordinates();
       const otherHitBox = otherBullet.getHitbox();
+      // We're using half size of the bullet hitbox because we want to prevent bullets passing close each other
       if (
-        x < xB + otherHitBox[0] &&
-        x + hitBox[0] > xB &&
-        y < yB + otherHitBox[1] &&
-        y + hitBox[1] > yB
+        x < xB + otherHitBox[0] / 2 &&
+        x + hitBox[0] / 2 > xB &&
+        y < yB + otherHitBox[1] / 2 &&
+        y + hitBox[1] / 2 > yB
       ) {
         // both bullets explode
         this.explosions.push(new Explosion(xB, yB));
