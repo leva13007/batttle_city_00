@@ -9,6 +9,7 @@ export type TankLevel = 0 | 1 | 2 | 3;
 export class Tank {
   private ID: number;
   protected isMovingTank = false;
+  protected isTankFire = false;
   private tankVelosity = .1; //px per Msecond
   private multiplyTankVelosity = 2.2;
   private x;
@@ -188,7 +189,12 @@ export class Tank {
     this.isMovingTank = moving;
   }
 
+  setFire(fire: boolean) {
+    this.isTankFire = fire;
+  }
+
   fire(bullets: Bullet[]) {
+    if (!this.isTankFire) return;
     // check if the game has one more your bullet | Tank level 0,1 -> 1 bullet
     if ([0, 1].includes(this.level) && bullets.some(bullet => bullet.getBelongsTo() === this.ID)) return;
     // Tank level 2,3 -> 2 bullet

@@ -5,6 +5,7 @@ import type { Direction } from './types';
 
 export class TankEnemy extends Tank {
   protected isMovingTank = true;
+  protected isTankFire = true;
   protected vectorMove: Direction; // [dX, dY]
   protected tank1DirrectionMap: Record<string, number> = {
     "0,-1": 0, // up

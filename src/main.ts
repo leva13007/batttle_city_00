@@ -68,7 +68,7 @@ class Game {
   setInputCbs() {
     this.inputManager.setChangeDirectionCb((dir) => this.isGameOver ? null : this.player1.setDirection(dir));
     this.inputManager.setToggleMovmentCb(moving => this.isGameOver ? null : this.player1.setMoving(moving));
-    this.inputManager.setMakeFire(() => this.isGameOver ? null : this.player1.fire(this.bullets))
+    this.inputManager.setToggleFireCb(fire => this.isGameOver ? null : this.player1.setFire(fire)); 
   }
 
   async start() {
@@ -200,6 +200,7 @@ class Game {
       tank1Coordinates = potentialTank1Coordinates;
       this.player1.doTankMove(potentialTank1Coordinates.x, potentialTank1Coordinates.y);
     }
+    this.player1.fire(this.bullets);
     this.enemies.forEach(enemy => {
 
       enemy.fire(this.bullets);
